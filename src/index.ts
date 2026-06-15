@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import routes from './routes';
 
 dotenv.config();
@@ -22,8 +23,11 @@ app.use(cors({
   credentials: true,
 }));
 
-// Body parser
+// Body parser — keep JSON for non-file routes
 app.use(express.json({ limit: '10mb' }));
+
+// Static file serving for uploaded images
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 // Health check
 app.get('/api/health', (_req, res) => {

@@ -1,6 +1,6 @@
 # 📋 Workspace — Senari Chinese Hotel
 
-> **Last updated:** June 12, 2026 — Phase 9: Master Data Full-Stack CRUD complete
+> **Last updated:** June 15, 2026 — Phase 10b: Seed data populated & store extraction fix
 
 ---
 
@@ -115,6 +115,26 @@
 - [x] **RULES.md updated** — Added standard API response format rule
 - [x] **WORKSPACE.md updated** — Phase 9 marked complete
 
+### Phase 10 — Food Items Full-Stack CRUD with Multer File Uploads
+- [x] **Backend food routes completed** — GET/POST/PUT/DELETE `/api/foods` with full CRUD
+- [x] **GET /api/foods/:id** — Single food item fetch for edit mode
+- [x] **Multer file upload configured** — Disk storage to `public/uploads/foods/`, 5 MB limit, image-only filter
+- [x] **Static file serving** — `app.use('/uploads', express.static(...))` in index.ts
+- [x] **Descending sort order** — `orderBy: { createdAt: 'desc' }` so new items appear first
+- [x] **Image cleanup on delete** — `DELETE /api/foods/:id` removes the image file from disk
+- [x] **Frontend Zustand store** — `useFoodStore` with bulletproof `extract()` + CRUD methods
+- [x] **FoodFormPage rewritten** — Proper `FormData` submission (no Base64), category dropdown uses `c.id` (integer), auto-fetches categories via `useMasterDataStore`
+- [x] **Image upload area refactored** — Stores raw `File` object for FormData, uses `URL.createObjectURL` for preview (no Canvas compression/Base64)
+- [x] **ARCHITECTURE.md updated** — Food API endpoints table with multipart fields, Food Items Data Flow diagram, Backend Stack updated with Multer
+- [x] **RULES.md updated** — Added file upload rule: "use multipart/form-data and Multer, not Base64"
+- [x] **WORKSPACE.md updated** — Phase 10 marked complete
+
+### Phase 10b — Seeding & Store Fix
+- [x] **foodStore.js fixed** — Replaced `api.ts` wrapper with native `fetch` + bulletproof extraction pattern (matching `masterDataStore`)
+- [x] **Seed data added** — 12 food items with realistic names, prices, descriptions, and category associations
+- [x] **RULES.md updated** — Added frontend data extraction rule + seed data rule
+- [x] **WORKSPACE.md updated** — Phase 10b marked complete
+
 ---
 
 ## 🏛️ Current Architecture
@@ -156,7 +176,7 @@ senari-chinese-hotel/           ← This repository will split into two
 ## 🔜 Next Steps
 
 ### Phase 9 — Backend Engineering (Priority)
-- [ ] **Run seed script** — Execute `npm run seed` inside `backend/` to populate initial data
+- [x] **Run seed script** — Executed `npx prisma db seed` — 12 food items populated
 - [ ] **Build remaining route modules** — Categories, Orders, Invoices, Customers, Tables, Inventory, Settings, Dashboard, Reports
 - [ ] **Add auth middleware** — JWT middleware to protect routes
 - [ ] **Connect frontend API client** — Update `frontend/src/lib/api.ts` to point to real backend
@@ -187,3 +207,5 @@ senari-chinese-hotel/           ← This repository will split into two
 | 38     | Database Schema Design — 11 models + 7 enums, full Prisma schema, DATABASE_SCHEMA.md rewrite | ✅ Done |
 | 39     | Database Seeding & API Scaffolding — seed script, auth route, food route, consolidated router, Express entry point | ✅ Done |
 | 40     | Master Data Full-Stack CRUD — Categories + Units API routes, Zustand async store, frontend loading states, standard response format | ✅ Done |
+| 41     | Food Items Full-Stack CRUD — Multer file uploads, FormData submission, Zustand foodStore, image cleanup on delete | ✅ Done |
+| 42     | Store extraction fix — foodStore.js native fetch + Prisma seed data (12 items) + docs updated | ✅ Done |

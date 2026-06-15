@@ -27,7 +27,10 @@ These rules must be followed by every contributor (human or AI) on every change.
 - **Naming**: Pages → `PascalCasePage.jsx`, Layouts → `PascalCaseLayout.jsx`, UI components → `PascalCase.jsx`.
 - **No inline styles**: Use Tailwind utility classes only. No `style={{}}` props unless absolutely unavoidable.
 - **Standard API response format**: All backend API responses must follow: `{ success: boolean, data?: any, error?: string }`. Success: send `data` with HTTP 2xx. Client error: send `error` with HTTP 4xx. Server error: send `error` with HTTP 500.
+- **File uploads**: All file uploads must use `multipart/form-data` and Multer. Do not use Base64 strings for images. Store files on disk under `public/uploads/` and serve them via `express.static`. The database stores only the relative URL path.
+- **Zustand GET rule**: When writing Zustand stores for GET/`fetchAll` requests, ALWAYS use native `fetch()` instead of `api.ts` to prevent data extraction bugs. Use the bulletproof pattern: `Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : [])`.
 - **Dummy data**: Keep all placeholder/dummy data co-located in the page file until a real API is connected.
+- **Seed data**: Always include representative sample data in `backend/prisma/seed.ts` for every model so the UI shows meaningful records immediately after `npx prisma db seed`.
 - **Dark mode**: Apply dark-mode variants (`dark:`) on all new components using the Tailwind `class` strategy.
 - **Custom selects**: Never use native `<select>` for visible UI. Use `<ModernSelect />` from `src/components/ui/ModernSelect.jsx`.
 - **URL state**: Filter/search/sort state on list pages must be stored in URL search params (`useSearchParams`) for shareability and refresh persistence.

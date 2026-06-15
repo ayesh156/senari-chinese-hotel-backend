@@ -103,7 +103,126 @@ async function main() {
       })
     )
   );
-  console.log(`   ✅ Created ${units.length} units`);
+  // ── Food Items ────────────────────────────────────────────────────────────
+  const foodItemsData = [
+    {
+      name: 'Chicken Kottu',
+      price: 890,
+      description: 'Stir-fried flatbread with chicken, vegetables, and aromatic spices',
+      categoryId: foodCategories[0].id, // Street Food
+      isAvailable: true,
+      isNew: true,
+      sortOrder: 1,
+    },
+    {
+      name: 'Egg Kottu',
+      price: 690,
+      description: 'Classic kottu roti with egg and vegetables',
+      categoryId: foodCategories[0].id,
+      isAvailable: true,
+      isNew: false,
+      sortOrder: 2,
+    },
+    {
+      name: 'Chicken Fried Rice',
+      price: 850,
+      description: 'Wok-fried rice with tender chicken pieces, egg, and vegetables',
+      categoryId: foodCategories[1].id, // Rice Dishes
+      isAvailable: true,
+      isNew: false,
+      sortOrder: 3,
+    },
+    {
+      name: 'Nasi Goreng',
+      price: 950,
+      description: 'Indonesian-style fried rice with fried egg, crackers, and sambal',
+      categoryId: foodCategories[1].id,
+      isAvailable: true,
+      isNew: true,
+      sortOrder: 4,
+    },
+    {
+      name: 'Chicken Noodles',
+      price: 820,
+      description: 'Egg noodles wok-tossed with chicken and seasonal vegetables',
+      categoryId: foodCategories[2].id, // Noodles
+      isAvailable: true,
+      isNew: false,
+      sortOrder: 5,
+    },
+    {
+      name: 'Devilled Chicken',
+      price: 1200,
+      description: 'Crispy fried chicken tossed in spicy devilled sauce with onions and peppers',
+      categoryId: foodCategories[3].id, // Mains
+      isAvailable: true,
+      isNew: false,
+      sortOrder: 6,
+    },
+    {
+      name: 'Sweet & Sour Fish',
+      price: 1350,
+      description: 'Deep-fried fish fillets in tangy sweet and sour sauce',
+      categoryId: foodCategories[3].id,
+      isAvailable: true,
+      isNew: true,
+      sortOrder: 7,
+    },
+    {
+      name: 'Watalappan',
+      price: 350,
+      description: 'Traditional Sri Lankan steamed coconut custard with jaggery',
+      categoryId: foodCategories[4].id, // Desserts
+      isAvailable: true,
+      isNew: false,
+      sortOrder: 8,
+    },
+    {
+      name: 'Ice Cream Trio',
+      price: 450,
+      description: 'Three scoops of vanilla, chocolate, and strawberry ice cream',
+      categoryId: foodCategories[4].id,
+      isAvailable: true,
+      isNew: false,
+      sortOrder: 9,
+    },
+    {
+      name: 'Fresh Lime Juice',
+      price: 250,
+      description: 'Freshly squeezed lime juice with a hint of salt and sugar',
+      categoryId: foodCategories[5].id, // Beverages
+      isAvailable: true,
+      isNew: false,
+      sortOrder: 10,
+    },
+    {
+      name: 'Mango Lassi',
+      price: 350,
+      description: 'Creamy yoghurt drink blended with ripe Alphonso mangoes',
+      categoryId: foodCategories[5].id,
+      isAvailable: true,
+      isNew: true,
+      sortOrder: 11,
+    },
+    {
+      name: 'Chicken Curry & Rice',
+      price: 1100,
+      description: 'Fragrant Sri Lankan chicken curry served with steamed rice and sambols',
+      categoryId: foodCategories[1].id,
+      isAvailable: true,
+      isNew: false,
+      sortOrder: 12,
+    },
+  ];
+
+  const foodItems = await Promise.all(
+    foodItemsData.map((item) =>
+      prisma.foodItem.create({
+        data: item,
+      })
+    )
+  );
+  console.log(`   ✅ Created ${foodItems.length} food items`);
 
   console.log('🎉 Seeding complete!');
 }
