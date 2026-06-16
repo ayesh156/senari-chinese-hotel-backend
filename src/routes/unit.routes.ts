@@ -44,7 +44,7 @@ router.post('/', async (req: Request, res: Response) => {
 // PUT /api/units/:id
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(req.params.id as string, 10);
     const { name, abbreviation } = req.body;
     if (!name) {
       res.status(400).json({ success: false, error: 'Name is required' });
@@ -70,7 +70,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 // DELETE /api/units/:id
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(req.params.id as string, 10);
     const inventoryCount = await prisma.inventoryItem.count({ where: { unitId: id } });
     if (inventoryCount > 0) {
       res.status(409).json({

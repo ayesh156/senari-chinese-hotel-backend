@@ -7,7 +7,7 @@ const router = Router();
 router.get('/', async (req: Request, res: Response) => {
   try {
     const typeFilter = req.query.type as string | undefined;
-    const where = typeFilter ? { type: typeFilter } : {};
+    const where = typeFilter ? { type: typeFilter as any } : {};
     const categories = await prisma.category.findMany({
       where,
       orderBy: { name: 'asc' },
@@ -51,7 +51,7 @@ router.post('/', async (req: Request, res: Response) => {
 // PUT /api/categories/:id
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(req.params.id as string, 10);
     const { name } = req.body;
     if (!name) {
       res.status(400).json({ success: false, error: 'Name is required' });
@@ -77,7 +77,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 // DELETE /api/categories/:id
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(req.params.id as string, 10);
     const foodCount = await prisma.foodItem.count({ where: { categoryId: id } });
     const inventoryCount = await prisma.inventoryItem.count({ where: { categoryId: id } });
     if (foodCount > 0 || inventoryCount > 0) {
