@@ -2,7 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import http from 'http';
 import routes from './routes';
+import { initSocket } from './lib/socket';
 
 dotenv.config();
 
@@ -23,7 +25,7 @@ app.use(cors({
   credentials: true,
 }));
 
-// Body parser — keep JSON for non-file routes
+// Body parser
 app.use(express.json({ limit: '10mb' }));
 
 // Static file serving for uploaded images
@@ -37,6 +39,10 @@ app.get('/api/health', (_req, res) => {
 // API routes
 app.use('/api', routes);
 
-app.listen(PORT, () => {
+// Create HTTP server and attach Socket.io
+const server = http.createServer(app);
+initSocket(server);
+
+server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
