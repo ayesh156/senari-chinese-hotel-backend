@@ -2,18 +2,19 @@
   "name": "senari-chinese-hotel-backend",
   "version": "1.0.0",
   "description": "Backend API for Senari Chinese Hotel",
-  "main": "dist/src/index.js",
+  "type": "module",
+  "main": "dist/main.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "build": "tsc",
-    "start:prod": "node dist/src/index.js",
-    "start": "node dist/src/index.js",
+    "dev": "tsx watch src/main.ts",
+    "build": "tsup src/main.ts --outDir dist --format esm --clean --sourcemap",
+    "start": "node dist/main.js",
+    "start:prod": "node dist/main.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "seed": "npx prisma db seed",
     "postinstall": "npx prisma generate"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts"
   },
   "keywords": [],
   "author": "",
@@ -41,6 +42,8 @@
     "prisma": "^7.8.0",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
+    "tsup": "^8.4.0",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   }
 }

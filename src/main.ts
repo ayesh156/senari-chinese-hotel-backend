@@ -2,9 +2,14 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import http from 'http';
 import routes from './routes';
 import { initSocket } from './lib/socket';
+import { errorHandler } from './middlewares/errorHandler.middleware';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -38,6 +43,9 @@ app.get('/api/health', (_req, res) => {
 
 // API routes
 app.use('/api', routes);
+
+// Global error handler (must be after routes)
+app.use(errorHandler);
 
 // Create HTTP server and attach Socket.io
 const server = http.createServer(app);

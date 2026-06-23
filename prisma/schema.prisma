@@ -1,12 +1,4 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "mysql"
-}
-
-// ─── Enums ─────────────────────────────────────────────────────────────────────
+// ── Enums ──────────────────────────────────────────────────────────────────────
 
 enum UserRole {
   ADMIN
@@ -46,236 +38,248 @@ enum TableStatus {
 }
 
 enum POStatus {
-  PAID
   UNPAID
+  PAID
   PARTIAL
 }
 
-// ─── Core Models ───────────────────────────────────────────────────────────────
+generator client {
+  provider = "prisma-client-js"
+}
 
-/// Staff user accounts for POS login
+datasource db {
+  provider = "mysql"
+}
+
+// ── Models ──────────────────────────────────────────────────────────────────────
+
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String?  @unique
-  phone     String?
-  password  String   @default("")
-  role      UserRole @default(STAFF)
-  active    Boolean  @default(true)
+  id Int @id @default(autoincrement())
+  name String
+  email String? @unique
+  phone String?
+  password String @default("")
+  role UserRole @default(STAFF)
+  active Boolean @default(true)
   createdAt DateTime @default(now())
-
-  orders Order[] // Cashier who processed the order
-
+  orders Order[]
   @@map("users")
 }
 
-/// Shared categories table — used for both food categories and inventory categories
 model Category {
-  id        Int          @id @default(autoincrement())
-  name      String       @unique
-  type      CategoryType // FOOD or INVENTORY
-  createdAt DateTime     @default(now())
-
-  foodItems      FoodItem[]      @relation("FoodCategory")
+  id Int @id @default(autoincrement())
+  name String @unique
+  type CategoryType
+  createdAt DateTime @default(now())
+  foodItems FoodItem[] @relation("FoodCategory")
   inventoryItems InventoryItem[] @relation("InventoryCategory")
-
   @@map("categories")
 }
 
-/// Measurement units (e.g., kg, liters, packets, pcs)
 model Unit {
-  id            Int              @id @default(autoincrement())
-  name          String           @unique
-  abbreviation  String
-  createdAt     DateTime         @default(now())
-
+  id Int @id @default(autoincrement())
+  name String @unique
+  abbreviation String
+  createdAt DateTime @default(now())
   inventoryItems InventoryItem[]
-
   @@map("units")
 }
 
-/// Menu items available for ordering
 model FoodItem {
-  id          Int      @id @default(autoincrement())
-  name        String
-  price       Decimal  @db.Decimal(10, 2)
-  categoryId  Int
-  category    Category @relation("FoodCategory", fields: [categoryId], references: [id])
-  description String?  @db.Text
-  ingredients String?  @db.Text // JSON array stored as text
-  image       String?
-  calories    Int?
-  prepTime    String?
-  isNew       Boolean  @default(false)
-  isAvailable Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
+  id Int @id @default(autoincrement())
+  name String
+  description String? @db.Text
+  price Decimal @db.Decimal(10, 2)
+  categoryId Int
+  category Category @relation("FoodCategory", fields: [categoryId], references: [id])
+  image String?
+  isNew Boolean @default(false)
+  isAvailable Boolean @default(true)
+  sortOrder Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   orderItems OrderItem[]
-  sortOrder  Int       @default(0) // For manual ordering in menu display
-
   @@map("food_items")
 }
 
-/// Raw ingredients / stock items for inventory management
 model InventoryItem {
-  id               Int      @id @default(autoincrement())
-  sku              String   @unique
-  name             String
-  categoryId       Int
-  category         Category @relation("InventoryCategory", fields: [categoryId], references: [id])
-  quantity         Decimal  @db.Decimal(10, 2)
-  unitId           Int
-  unit             Unit     @relation(fields: [unitId], references: [id])
-  minAlertLevel    Decimal  @default(0) @db.Decimal(10, 2)
-  unitPrice        Decimal  @db.Decimal(10, 2)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
+  id Int @id @default(autoincrement())
+  sku String @unique
+  name String
+  categoryId Int
+  category Category @relation("InventoryCategory", fields: [categoryId], references: [id])
+  quantity Decimal @db.Decimal(10, 2)
+  unitId Int
+  unit Unit @relation(fields: [unitId], references: [id])
+  minAlertLevel Decimal @default(0) @db.Decimal(10, 2)
+  unitPrice Decimal @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   purchaseOrderItems PurchaseOrderItem[]
-  adjustments        InventoryAdjustment[]
-
+  adjustments InventoryAdjustment[]
   @@map("inventory_items")
 }
 
-/// Customers who dine in or place orders
 model Customer {
-  id            Int      @id @default(autoincrement())
-  name          String
-  phone         String   @unique
-  email         String?
-  address       String?  @db.Text
-  nic           String?  // National ID card number
-  image         String?
-  dueAmount     Decimal  @default(0) @db.Decimal(10, 2)
-  reminderCount Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
+  id Int @id @default(autoincrement())
+  name String
+  phone String @unique
+  email String?
+  address String? @db.Text
+  nic String?
+  image String?
+  dueAmount Decimal @default(0) @db.Decimal(10, 2)
+  reminderCount Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   orders Order[]
-
+  paymentRecords PaymentRecord[]
+  reminderHistory ReminderHistory[]
   @@map("customers")
 }
 
-/// Suppliers who provide inventory items
+model PaymentRecord {
+  id Int @id @default(autoincrement())
+  customerId Int
+  customer Customer @relation(fields: [customerId], references: [id])
+  amount Decimal @db.Decimal(10, 2)
+  notes String?
+  createdAt DateTime @default(now())
+  @@map("payment_records")
+}
+
+model ReminderHistory {
+  id Int @id @default(autoincrement())
+  customerId Int
+  customer Customer @relation(fields: [customerId], references: [id])
+  message String @db.Text
+  status String @default("sent")
+  createdAt DateTime @default(now())
+  @@map("reminder_history")
+}
+
 model Supplier {
-  id              Int      @id @default(autoincrement())
-  name            String
-  phone           String?
-  email           String?
-  address         String?  @db.Text
-  category        String?  // Free-text supplier category (e.g., Vegetables, Meat)
-  payableAmount   Decimal  @default(0) @db.Decimal(10, 2)
-  totalPurchases  Decimal  @default(0) @db.Decimal(10, 2)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
+  id Int @id @default(autoincrement())
+  name String
+  phone String?
+  email String?
+  address String? @db.Text
+  category String?
+  payableAmount Decimal @default(0) @db.Decimal(10, 2)
+  totalPurchases Decimal @default(0) @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   purchaseOrders PurchaseOrder[]
-
+  payments SupplierPayment[]
+  reminders SupplierReminder[]
   @@map("suppliers")
 }
 
-/// Restaurant table management
+model SupplierPayment {
+  id Int @id @default(autoincrement())
+  supplierId Int
+  supplier Supplier @relation(fields: [supplierId], references: [id])
+  amountPaid Decimal @db.Decimal(10, 2)
+  paymentMethod String @default("Cash")
+  notes String?
+  createdAt DateTime @default(now())
+  @@map("supplier_payments")
+}
+
+model SupplierReminder {
+  id Int @id @default(autoincrement())
+  supplierId Int
+  supplier Supplier @relation(fields: [supplierId], references: [id])
+  message String @db.Text
+  status String @default("sent")
+  createdAt DateTime @default(now())
+  @@map("supplier_reminders")
+}
+
 model RestaurantTable {
-  id          Int         @id @default(autoincrement())
-  tableNumber Int         @unique
-  capacity    Int         @default(4)
-  status      TableStatus @default(AVAILABLE)
-  note        String?     @db.Text
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
+  id Int @id @default(autoincrement())
+  tableNumber Int @unique
+  capacity Int @default(4)
+  status TableStatus @default(AVAILABLE)
+  note String? @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   orders Order[]
-
   @@map("restaurant_tables")
 }
 
-/// Customer orders (dine-in, takeaway, or delivery)
 model Order {
-  id            Int           @id @default(autoincrement())
-  invoiceNumber String        @unique
-  type          OrderType     @default(DINE_IN)
-  status        OrderStatus   @default(PENDING)
+  id Int @id @default(autoincrement())
+  invoiceNumber String @unique
+  type OrderType @default(DINE_IN)
+  status OrderStatus @default(PENDING)
   paymentStatus PaymentStatus @default(UNPAID)
-  subtotal      Decimal       @db.Decimal(10, 2)
-  discount      Decimal       @default(0) @db.Decimal(10, 2)
-  total         Decimal       @db.Decimal(10, 2)
-  amountPaid    Decimal       @default(0) @db.Decimal(10, 2)
-  notes         String?       @db.Text
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  // Relationships
+  subtotal Decimal @db.Decimal(10, 2)
+  discount Decimal @default(0) @db.Decimal(10, 2)
+  total Decimal @db.Decimal(10, 2)
+  amountPaid Decimal @default(0) @db.Decimal(10, 2)
+  notes String? @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   customerId Int?
-  customer   Customer?       @relation(fields: [customerId], references: [id])
-  tableId    Int?
-  table      RestaurantTable? @relation(fields: [tableId], references: [id])
-  userId     Int?
-  user       User?            @relation(fields: [userId], references: [id])
-
+  customer Customer? @relation(fields: [customerId], references: [id])
+  tableId Int?
+  table RestaurantTable? @relation(fields: [tableId], references: [id])
+  userId Int?
+  user User? @relation(fields: [userId], references: [id])
   items OrderItem[]
-
   @@map("orders")
 }
 
-/// Line items on an order (join table between Order and FoodItem)
 model OrderItem {
-  id        Int      @id @default(autoincrement())
-  orderId   Int
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  foodId    Int
-  food      FoodItem @relation(fields: [foodId], references: [id])
-  quantity  Int      @default(1)
-  unitPrice Decimal  @db.Decimal(10, 2)
-  subtotal  Decimal  @db.Decimal(10, 2)
-
+  id Int @id @default(autoincrement())
+  orderId Int
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  foodId Int
+  food FoodItem @relation(fields: [foodId], references: [id])
+  quantity Int @default(1)
+  unitPrice Decimal @db.Decimal(10, 2)
+  subtotal Decimal @db.Decimal(10, 2)
   @@map("order_items")
 }
 
-/// Purchase orders placed to suppliers for inventory restocking
 model PurchaseOrder {
-  id            Int        @id @default(autoincrement())
-  poNumber      String     @unique
-  supplierId    Int
-  supplier      Supplier   @relation(fields: [supplierId], references: [id])
-  subtotal      Decimal    @db.Decimal(10, 2)
-  paidAmount    Decimal    @default(0) @db.Decimal(10, 2)
-  paymentStatus POStatus   @default(UNPAID)
-  notes         String?    @db.Text
-  receivedAt    DateTime?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-
+  id Int @id @default(autoincrement())
+  poNumber String @unique
+  supplierId Int
+  supplier Supplier @relation(fields: [supplierId], references: [id])
+  subtotal Decimal @db.Decimal(10, 2)
+  paidAmount Decimal @default(0) @db.Decimal(10, 2)
+  paymentStatus POStatus @default(UNPAID)
+  notes String? @db.Text
+  receivedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   items PurchaseOrderItem[]
-
   @@map("purchase_orders")
 }
 
-/// Line items on a purchase order (join table between PurchaseOrder and InventoryItem)
 model PurchaseOrderItem {
-  id              Int            @id @default(autoincrement())
+  id Int @id @default(autoincrement())
   purchaseOrderId Int
-  purchaseOrder   PurchaseOrder  @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   inventoryItemId Int
-  inventoryItem   InventoryItem  @relation(fields: [inventoryItemId], references: [id])
-  quantity        Decimal        @db.Decimal(10, 2)
-  unitPrice       Decimal        @db.Decimal(10, 2)
-  total           Decimal        @db.Decimal(10, 2)
-
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  quantity Decimal @db.Decimal(10, 2)
+  unitPrice Decimal @db.Decimal(10, 2)
+  total Decimal @db.Decimal(10, 2)
   @@map("purchase_order_items")
 }
 
-/// Inventory stock adjustment log (additions, usage, waste, corrections)
 model InventoryAdjustment {
-  id              Int           @id @default(autoincrement())
+  id Int @id @default(autoincrement())
   inventoryItemId Int
-  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
-  adjustmentType  String        // "New Delivery", "Daily Usage", "Damage/Waste", "Count Correction", "Other"
-  quantity        Decimal       @db.Decimal(10, 2) // Positive = addition, Negative = reduction
-  previousStock   Decimal       @db.Decimal(10, 2)
-  newStock        Decimal       @db.Decimal(10, 2)
-  notes           String?       @db.Text
-  createdAt       DateTime      @default(now())
-
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  adjustmentType String
+  quantity Decimal @db.Decimal(10, 2)
+  previousStock Decimal @db.Decimal(10, 2)
+  newStock Decimal @db.Decimal(10, 2)
+  notes String? @db.Text
+  createdAt DateTime @default(now())
   @@map("inventory_adjustments")
 }
