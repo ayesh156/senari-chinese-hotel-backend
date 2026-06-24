@@ -47,6 +47,10 @@ async function main() {
   const inventoryCategories = await Promise.all(inventoryCategoryNames.map((name) => prisma.category.create({ data: { name, type: 'INVENTORY' } })));
   console.log(`   ✅ Created ${inventoryCategories.length} inventory categories`);
 
+  const supplierCategoryNames = ['Groceries', 'Meat', 'Vegetables', 'Seafood', 'Dairy', 'Spices', 'Oils', 'Packaging', 'Beverages', 'Frozen Foods'];
+  const supplierCategories = await Promise.all(supplierCategoryNames.map((name) => prisma.category.create({ data: { name, type: 'SUPPLIER' } })));
+  console.log(`   ✅ Created ${supplierCategories.length} supplier categories`);
+
   // ── Units ────────────────────────────────────────────────────────────────
   const unitData = [
     { name: 'Kilogram', abbreviation: 'kg' }, { name: 'Gram', abbreviation: 'g' },
@@ -208,11 +212,11 @@ async function main() {
   for (const po of purchaseOrderData) {
     const supplierId = suppliers[po.si].id;
     await prisma.purchaseOrder.create({
-      data: { poNumber: `PO-${++poSeq}`, supplierId, subtotal: po.total, paidAmount: po.paid, paymentStatus: po.status as any, notes: po.notes, receivedAt: new Date() },
+      data: { poNumber: `PO-${++poSeq}`, supplierId, totalAmount: po.total, amountPaid: po.paid, paymentStatus: po.status as any, notes: po.notes, receivedAt: new Date() },
     });
-    const agg = await prisma.purchaseOrder.aggregate({ where: { supplierId }, _sum: { subtotal: true, paidAmount: true } });
-    const tp = Number(agg._sum.subtotal || 0);
-    const tpd = Number(agg._sum.paidAmount || 0);
+    const agg = await prisma.purchaseOrder.aggregate({ where: { supplierId }, _sum: { totalAmount: true, amountPaid: true } });
+    const tp = Number(agg._sum.totalAmount || 0);
+    const tpd = Number(agg._sum.amountPaid || 0);
     await prisma.supplier.update({ where: { id: supplierId }, data: { totalPurchases: tp, payableAmount: Math.max(0, tp - tpd) } });
   }
   console.log(`   ✅ Created ${purchaseOrderData.length} purchase orders`);

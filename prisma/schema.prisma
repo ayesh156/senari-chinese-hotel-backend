@@ -9,6 +9,7 @@ enum UserRole {
 enum CategoryType {
   FOOD
   INVENTORY
+  SUPPLIER
 }
 
 enum OrderType {
@@ -68,11 +69,12 @@ model User {
 
 model Category {
   id Int @id @default(autoincrement())
-  name String @unique
+  name String
   type CategoryType
   createdAt DateTime @default(now())
   foodItems FoodItem[] @relation("FoodCategory")
   inventoryItems InventoryItem[] @relation("InventoryCategory")
+  @@unique([name, type])
   @@map("categories")
 }
 
@@ -179,6 +181,8 @@ model SupplierPayment {
   id Int @id @default(autoincrement())
   supplierId Int
   supplier Supplier @relation(fields: [supplierId], references: [id])
+  purchaseOrderId Int?
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
   amountPaid Decimal @db.Decimal(10, 2)
   paymentMethod String @default("Cash")
   notes String?
@@ -248,14 +252,15 @@ model PurchaseOrder {
   poNumber String @unique
   supplierId Int
   supplier Supplier @relation(fields: [supplierId], references: [id])
-  subtotal Decimal @db.Decimal(10, 2)
-  paidAmount Decimal @default(0) @db.Decimal(10, 2)
+  totalAmount Decimal @db.Decimal(10, 2)
+  amountPaid Decimal @default(0) @db.Decimal(10, 2)
   paymentStatus POStatus @default(UNPAID)
   notes String? @db.Text
   receivedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   items PurchaseOrderItem[]
+  payments SupplierPayment[]
   @@map("purchase_orders")
 }
 
@@ -267,7 +272,7 @@ model PurchaseOrderItem {
   inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
   quantity Decimal @db.Decimal(10, 2)
   unitPrice Decimal @db.Decimal(10, 2)
-  total Decimal @db.Decimal(10, 2)
+  subTotal Decimal @db.Decimal(10, 2)
   @@map("purchase_order_items")
 }
 

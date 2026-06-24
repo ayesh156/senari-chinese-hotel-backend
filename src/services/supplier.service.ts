@@ -5,12 +5,12 @@ export class SupplierService {
     const suppliers = await prisma.supplier.findMany({ orderBy: { name: 'asc' } });
     return Promise.all(suppliers.map(async (s) => {
       const [poAgg, paymentCount, reminderCount] = await Promise.all([
-        prisma.purchaseOrder.aggregate({ where: { supplierId: s.id }, _sum: { subtotal: true, paidAmount: true } }),
+        prisma.purchaseOrder.aggregate({ where: { supplierId: s.id }, _sum: { totalAmount: true, amountPaid: true } }),
         prisma.supplierPayment.count({ where: { supplierId: s.id } }),
         prisma.supplierReminder.count({ where: { supplierId: s.id } }),
       ]);
-      const totalPurchases = Number(poAgg._sum.subtotal || 0);
-      const totalPaid = Number(poAgg._sum.paidAmount || 0);
+      const totalPurchases = Number(poAgg._sum.totalAmount || 0);
+      const totalPaid = Number(poAgg._sum.amountPaid || 0);
       return {
         id: s.id, name: s.name, phone: s.phone, email: s.email, address: s.address, category: s.category,
         totalPurchases, payableAmount: Math.max(0, totalPurchases - totalPaid),
@@ -23,12 +23,12 @@ export class SupplierService {
     const s = await prisma.supplier.findUnique({ where: { id } });
     if (!s) throw Object.assign(new Error('Supplier not found'), { statusCode: 404 });
     const [poAgg, paymentCount, reminderCount] = await Promise.all([
-      prisma.purchaseOrder.aggregate({ where: { supplierId: id }, _sum: { subtotal: true, paidAmount: true } }),
+      prisma.purchaseOrder.aggregate({ where: { supplierId: id }, _sum: { totalAmount: true, amountPaid: true } }),
       prisma.supplierPayment.count({ where: { supplierId: id } }),
       prisma.supplierReminder.count({ where: { supplierId: id } }),
     ]);
-    const totalPurchases = Number(poAgg._sum.subtotal || 0);
-    const totalPaid = Number(poAgg._sum.paidAmount || 0);
+    const totalPurchases = Number(poAgg._sum.totalAmount || 0);
+    const totalPaid = Number(poAgg._sum.amountPaid || 0);
     return {
       id: s.id, name: s.name, phone: s.phone, email: s.email, address: s.address, category: s.category,
       totalPurchases, payableAmount: Math.max(0, totalPurchases - totalPaid),
@@ -79,18 +79,18 @@ export class SupplierService {
       let remaining = amount;
       for (const po of unpaidPOs) {
         if (remaining <= 0) break;
-        const outstandingDue = Number(po.subtotal) - Number(po.paidAmount);
+        const outstandingDue = Number(po.totalAmount) - Number(po.amountPaid);
         if (outstandingDue <= 0) continue;
         const paymentForThisPO = Math.min(remaining, outstandingDue);
-        const newPaidAmount = Number(po.paidAmount) + paymentForThisPO;
-        const newPaymentStatus = newPaidAmount >= Number(po.subtotal) ? 'PAID' : 'PARTIAL';
-        await tx.purchaseOrder.update({ where: { id: po.id }, data: { paidAmount: newPaidAmount, paymentStatus: newPaymentStatus as any } });
+        const newPaidAmount = Number(po.amountPaid) + paymentForThisPO;
+        const newPaymentStatus = newPaidAmount >= Number(po.totalAmount) ? 'PAID' : 'PARTIAL';
+        await tx.purchaseOrder.update({ where: { id: po.id }, data: { amountPaid: newPaidAmount, paymentStatus: newPaymentStatus as any } });
         remaining -= paymentForThisPO;
       }
       await tx.supplierPayment.create({ data: { supplierId, amountPaid: amount, notes: `Settled Rs. ${amount.toLocaleString('en-LK')} against outstanding POs` } });
-      const poAgg = await tx.purchaseOrder.aggregate({ where: { supplierId }, _sum: { subtotal: true, paidAmount: true } });
-      const newPayable = Math.max(0, Number(poAgg._sum.subtotal || 0) - Number(poAgg._sum.paidAmount || 0));
-      await tx.supplier.update({ where: { id: supplierId }, data: { payableAmount: newPayable, totalPurchases: Number(poAgg._sum.subtotal || 0) } });
+      const poAgg = await tx.purchaseOrder.aggregate({ where: { supplierId }, _sum: { totalAmount: true, amountPaid: true } });
+      const newPayable = Math.max(0, Number(poAgg._sum.totalAmount || 0) - Number(poAgg._sum.amountPaid || 0));
+      await tx.supplier.update({ where: { id: supplierId }, data: { payableAmount: newPayable, totalPurchases: Number(poAgg._sum.totalAmount || 0) } });
       return { appliedAmount: amount - remaining, remainingPayable: newPayable };
     });
   }

@@ -1,8 +1,9 @@
+import { CategoryType } from '@prisma/client';
 import prisma from '../lib/prisma';
 
 interface CreateCategoryInput {
   name: string;
-  type: 'FOOD' | 'INVENTORY';
+  type: 'FOOD' | 'INVENTORY' | 'SUPPLIER';
 }
 
 interface UpdateCategoryInput {
@@ -11,7 +12,7 @@ interface UpdateCategoryInput {
 
 export class CategoryService {
   static async getAll(type?: string) {
-    const where = type ? { type: type as any } : {};
+    const where = type ? { type: type as CategoryType } : {};
     const categories = await prisma.category.findMany({
       where,
       orderBy: { name: 'asc' },
@@ -29,13 +30,15 @@ export class CategoryService {
     if (!data.name || !data.type) {
       throw Object.assign(new Error('Name and type are required'), { statusCode: 400 });
     }
-    if (!['FOOD', 'INVENTORY'].includes(data.type)) {
-      throw Object.assign(new Error('Type must be FOOD or INVENTORY'), { statusCode: 400 });
+    if (!['FOOD', 'INVENTORY', 'SUPPLIER'].includes(data.type)) {
+      throw Object.assign(new Error('Type must be FOOD, INVENTORY, or SUPPLIER'), { statusCode: 400 });
     }
 
-    const existing = await prisma.category.findUnique({ where: { name: data.name } });
+    const existing = await prisma.category.findUnique({
+      where: { name_type: { name: data.name, type: data.type } },
+    });
     if (existing) {
-      throw Object.assign(new Error('A category with this name already exists'), { statusCode: 409 });
+      throw Object.assign(new Error(`A category "${data.name}" with type "${data.type}" already exists`), { statusCode: 409 });
     }
 
     const category = await prisma.category.create({
@@ -50,9 +53,16 @@ export class CategoryService {
       throw Object.assign(new Error('Name is required'), { statusCode: 400 });
     }
 
-    const existing = await prisma.category.findUnique({ where: { name: data.name } });
+    const target = await prisma.category.findUnique({ where: { id } });
+    if (!target) {
+      throw Object.assign(new Error('Category not found'), { statusCode: 404 });
+    }
+
+    const existing = await prisma.category.findUnique({
+      where: { name_type: { name: data.name, type: target.type } },
+    });
     if (existing && existing.id !== id) {
-      throw Object.assign(new Error('A category with this name already exists'), { statusCode: 409 });
+      throw Object.assign(new Error(`A category named "${data.name}" already exists in type "${target.type}"`), { statusCode: 409 });
     }
 
     const category = await prisma.category.update({
