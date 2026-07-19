@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import http from 'http';
+import cookieParser from 'cookie-parser';
 import routes from './routes';
 import { initSocket } from './lib/socket';
 import { errorHandler } from './middlewares/errorHandler.middleware';
@@ -32,6 +33,9 @@ app.use(cors({
 
 // Body parser
 app.use(express.json({ limit: '10mb' }));
+
+// Cookie parser (for refresh token cookies)
+app.use(cookieParser());
 
 // Static file serving for uploaded images
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));

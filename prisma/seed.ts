@@ -160,28 +160,84 @@ async function main() {
   const customers = await Promise.all(customerData.map((c) => prisma.customer.create({ data: c })));
   console.log(`   ✅ Created ${customers.length} customers`);
 
-  // ── Orders ──────────────────────────────────────────────────────────
-  const orderStatuses = ['PENDING', 'PREPARING', 'READY', 'COMPLETED'] as const;
-  const paymentStatuses = ['UNPAID', 'PAID', 'PARTIAL'] as const;
+  // ── Helper: Random date in month ──────────────────────────────────
+  function getRandomDateInMonth(year: number, month: number): Date {
+    // month is 0-indexed (3=April, 4=May, 5=June)
+    const date = new Date(year, month, Math.floor(Math.random() * 28) + 1);
+    date.setHours(Math.floor(Math.random() * 12) + 10, Math.floor(Math.random() * 60)); // Lunch/Dinner 10am-10pm
+    return date;
+  }
+
+  // ── Helper: Pick random items from array ──────────────────────────
+  function pickRandom(arr: any[], min = 1, max = 4) {
+    const count = min + Math.floor(Math.random() * Math.min(max - min + 1, arr.length));
+    const shuffled = [...arr].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, count);
+  }
+
+  // ── Historical Orders (April, May, June 2026) ─────────────────────
+  const orderStatuses = ['COMPLETED', 'COMPLETED', 'COMPLETED', 'COMPLETED'] as const;
+  const paymentStatuses = ['PAID', 'PAID', 'PAID', 'PARTIAL'] as const;
   const orderTypes = ['DINE_IN', 'TAKEAWAY', 'DELIVERY'] as const;
   const customerNameCycle = ['Walk-in Customer', 'Kamal Perera', 'Nimal Silva', 'Sanduni Fernando', 'Ruwan Jayawardena', 'Priya Wickramasinghe'];
+
   let invoiceSeq = 582910;
-  for (let i = 0; i < 15; i++) {
-    const status = orderStatuses[i % orderStatuses.length];
-    const payStatus = paymentStatuses[i % paymentStatuses.length];
-    const type = orderTypes[i % orderTypes.length];
-    const customerName = customerNameCycle[i % customerNameCycle.length];
-    const customerMatch = customers.find(c => c.name === customerName);
-    const customerId = customerMatch ? customerMatch.id : null;
-    const itemCount = 1 + (i % 3);
-    const foodItemsForOrder = foodItems.slice(0, itemCount);
-    const subtotal = foodItemsForOrder.reduce((s, f) => s + Number(f.price), 0);
-    const discount = Math.round(subtotal * 0.05);
-    const total = subtotal - discount;
-    const amountPaid = payStatus === 'PAID' ? total : payStatus === 'PARTIAL' ? Math.round(total * 0.5) : 0;
-    await prisma.order.create({ data: { invoiceNumber: `INV${++invoiceSeq}`, type, status, paymentStatus: payStatus, subtotal, discount, total, amountPaid, customerId, notes: JSON.stringify({ customerName }), items: { create: foodItemsForOrder.map((f) => ({ foodId: f.id, quantity: 1 + (i % 2), unitPrice: Number(f.price), subtotal: Number(f.price) * (1 + (i % 2)) })) } } });
+  let ordersApril = 0, ordersMay = 0, ordersJune = 0;
+
+  // Define monthly configs: [year, monthIndex, targetCount]
+  const monthlyConfigs = [
+    [2026, 3, 20],  // April: 20 orders
+    [2026, 4, 22],  // May: 22 orders
+    [2026, 5, 25],  // June: 25 orders (up to today)
+  ];
+
+  for (const [year, monthIdx, targetCount] of monthlyConfigs) {
+    for (let i = 0; i < targetCount; i++) {
+      const createdAt = getRandomDateInMonth(year, monthIdx);
+      const status = 'COMPLETED';
+      const payStatus = paymentStatuses[i % paymentStatuses.length];
+      const type = orderTypes[i % orderTypes.length];
+      const customerName = customerNameCycle[i % customerNameCycle.length];
+      const customerMatch = customers.find(c => c.name === customerName);
+      const customerId = customerMatch ? customerMatch.id : null;
+
+      // Random 2-4 food items per order
+      const selectedFoods = pickRandom(foodItems, 2, 4);
+      const items = selectedFoods.map((f) => {
+        const qty = 1 + Math.floor(Math.random() * 3); // 1-3 qty per item
+        const unitPrice = Number(f.price);
+        return { foodId: f.id, quantity: qty, unitPrice, subtotal: unitPrice * qty };
+      });
+      const subtotal = Math.round(items.reduce((s, item) => s + item.subtotal, 0));
+      const discountPct = Math.random() > 0.6 ? Math.floor(Math.random() * 10) : 0; // 0-10% discount sometimes
+      const discount = Math.round(subtotal * discountPct / 100);
+      const total = subtotal - discount;
+      const amountPaid = payStatus === 'PAID' ? total : payStatus === 'PARTIAL' ? Math.round(total * 0.6) : 0;
+
+      await prisma.order.create({
+        data: {
+          invoiceNumber: `INV${++invoiceSeq}`,
+          type,
+          status,
+          paymentStatus: payStatus,
+          subtotal,
+          discount,
+          total,
+          amountPaid,
+          customerId,
+          createdAt,
+          updatedAt: new Date(createdAt.getTime() + 3600000), // 1hr later
+          notes: JSON.stringify({ customerName }),
+          items: { create: items },
+        },
+      });
+
+      if (monthIdx === 3) ordersApril++;
+      else if (monthIdx === 4) ordersMay++;
+      else ordersJune++;
+    }
   }
-  console.log(`   ✅ Created 15 orders with items`);
+  console.log(`   ✅ Created ${ordersApril + ordersMay + ordersJune} historical orders (Apr:${ordersApril}, May:${ordersMay}, Jun:${ordersJune})`);
 
   // ── Suppliers ──────────────────────────────────────────────────────────
   const supplierData = [
@@ -227,6 +283,22 @@ async function main() {
   await prisma.supplierReminder.create({ data: { supplierId: suppliers[0].id, message: 'Dear Perera Groceries, please process your outstanding invoices with Senari Chinese Hotel.', status: 'sent' } });
   await prisma.supplierReminder.create({ data: { supplierId: suppliers[4].id, message: 'Dear Ocean Fresh Seafood, kindly review your pending payments. Thank you!', status: 'sent' } });
   console.log('   ✅ Created supplier payments & reminders (ledger history)');
+
+  // ── Restaurant Tables ──────────────────────────────────────────────────
+  const tableData = [
+    { tableNumber: 'T1', capacity: 2, status: 'AVAILABLE', notes: 'Window side' },
+    { tableNumber: 'T2', capacity: 4, status: 'AVAILABLE', notes: 'Near entrance' },
+    { tableNumber: 'T3', capacity: 4, status: 'OCCUPIED', notes: null },
+    { tableNumber: 'T4', capacity: 6, status: 'AVAILABLE', notes: 'Family table' },
+    { tableNumber: 'T5', capacity: 2, status: 'RESERVED', notes: 'VIP booking at 8pm - Mr. Kamal' },
+    { tableNumber: 'T6', capacity: 4, status: 'OCCUPIED', notes: null },
+    { tableNumber: 'T7', capacity: 8, status: 'AVAILABLE', notes: 'Large group table' },
+    { tableNumber: 'VIP1', capacity: 4, status: 'AVAILABLE', notes: 'VIP section - requires minimum spend Rs. 5000' },
+    { tableNumber: 'VIP2', capacity: 6, status: 'RESERVED', notes: 'Birthday celebration - 7:30pm' },
+    { tableNumber: 'B1', capacity: 4, status: 'AVAILABLE', notes: 'Balcony area' },
+  ];
+  const tables = await Promise.all(tableData.map((t) => prisma.restaurantTable.create({ data: t })));
+  console.log(`   ✅ Created ${tables.length} restaurant tables`);
 
   console.log('🎉 Seeding complete!');
 }
