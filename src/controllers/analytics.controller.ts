@@ -110,9 +110,10 @@ export const getDetailedAnalytics = async (req: Request, res: Response, next: Ne
   }
 };
 
-export const getHourlyTrafficHandler = async (_req: Request, res: Response, next: NextFunction) => {
+export const getHourlyTrafficHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const data = await AnalyticsService.getHourlyTraffic();
+    const dateFilter = parseDateFilter(req);
+    const data = await AnalyticsService.getHourlyTraffic(dateFilter);
     res.set('Cache-Control', 'public, max-age=30, s-maxage=30');
     res.json({ success: true, data });
   } catch (error) {
@@ -120,9 +121,10 @@ export const getHourlyTrafficHandler = async (_req: Request, res: Response, next
   }
 };
 
-export const getInventoryEfficiencyHandler = async (_req: Request, res: Response, next: NextFunction) => {
+export const getInventoryEfficiencyHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const data = await AnalyticsService.getInventoryEfficiency();
+    const dateFilter = parseDateFilter(req);
+    const data = await AnalyticsService.getInventoryEfficiency(dateFilter);
     res.set('Cache-Control', 'public, max-age=30, s-maxage=30');
     res.json({ success: true, data });
   } catch (error) {
@@ -130,9 +132,10 @@ export const getInventoryEfficiencyHandler = async (_req: Request, res: Response
   }
 };
 
-export const getPaymentDistributionHandler = async (_req: Request, res: Response, next: NextFunction) => {
+export const getPaymentDistributionHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const data = await AnalyticsService.getPaymentDistribution();
+    const dateFilter = parseDateFilter(req);
+    const data = await AnalyticsService.getPaymentDistribution(dateFilter);
     res.set('Cache-Control', 'public, max-age=30, s-maxage=30');
     res.json({ success: true, data });
   } catch (error) {
@@ -140,9 +143,10 @@ export const getPaymentDistributionHandler = async (_req: Request, res: Response
   }
 };
 
-export const getMostProfitableFoodsHandler = async (_req: Request, res: Response, next: NextFunction) => {
+export const getMostProfitableFoodsHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const data = await AnalyticsService.getMostProfitableFoods();
+    const dateFilter = parseDateFilter(req);
+    const data = await AnalyticsService.getMostProfitableFoods(dateFilter);
     res.set('Cache-Control', 'public, max-age=30, s-maxage=30');
     res.json({ success: true, data });
   } catch (error) {

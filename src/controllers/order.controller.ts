@@ -1,5 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
+import type { AuthRequest } from '../middlewares/auth.middleware';
 import { OrderService } from '../services/order.service';
+import { AuditService, AuditEntities } from '../services/audit.service';
+
+function auditCtx(authReq: AuthRequest) {
+  return { userId: authReq.user?.userId, userName: authReq.user?.email ?? undefined, userRole: authReq.user?.role ?? undefined };
+}
 
 export const getOrders = async (_req: Request, res: Response, next: NextFunction) => {
   try {
@@ -52,6 +58,16 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
       customerName,
       customerId: customerId ? parseInt(customerId, 10) : undefined,
     });
+
+    // Non-blocking audit
+    const authReq = req as AuthRequest;
+    AuditService.created(
+      AuditEntities.ORDER,
+      order.id,
+      { invoiceNumber: order.invoiceNumber, total: total, type: orderType },
+      auditCtx(authReq)
+    );
+
     res.status(201).json({ success: true, data: order });
   } catch (error) {
     next(error);
@@ -84,6 +100,16 @@ export const updateOrderStatus = async (req: Request, res: Response, next: NextF
     const id = parseInt(req.params.id as string, 10);
     const { status } = req.body;
     const updated = await OrderService.updateStatus(id, status);
+
+    // Non-blocking audit
+    const authReq = req as AuthRequest;
+    AuditService.updated(
+      AuditEntities.ORDER,
+      id,
+      { oldStatus: undefined, newStatus: status, orderId: id },
+      auditCtx(authReq)
+    );
+
     res.json({ success: true, data: updated });
   } catch (error) {
     next(error);
@@ -93,7 +119,17 @@ export const updateOrderStatus = async (req: Request, res: Response, next: NextF
 export const deleteOrder = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = parseInt(req.params.id as string, 10);
+    const authReq = req as AuthRequest;
     await OrderService.delete(id);
+
+    // Non-blocking audit
+    AuditService.deleted(
+      AuditEntities.ORDER,
+      id,
+      { orderId: id },
+      auditCtx(authReq)
+    );
+
     res.json({ success: true, data: null });
   } catch (error) {
     next(error);

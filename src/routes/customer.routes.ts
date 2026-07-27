@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { authMiddleware, authorize } from '../middlewares/auth.middleware';
 import {
   getCustomers, getCustomerById, getCustomerPayments, getCustomerReminders,
   createCustomer, updateCustomer, deleteCustomer,
@@ -8,14 +9,16 @@ import { uploadCustomerAvatar } from '../middlewares/uploadCustomer.middleware';
 
 const router = Router();
 
-router.get('/', getCustomers);
-router.get('/:id', getCustomerById);
-router.get('/:id/payments', getCustomerPayments);
-router.get('/:id/reminders', getCustomerReminders);
-router.post('/', uploadCustomerAvatar.single('avatar'), createCustomer);
-router.put('/:id', uploadCustomerAvatar.single('avatar'), updateCustomer);
-router.delete('/:id', deleteCustomer);
-router.post('/:id/settle', settleCustomerDue);
-router.post('/:id/remind', sendCustomerReminder);
+// Read — all authenticated
+router.get('/', authMiddleware, getCustomers);
+router.get('/:id', authMiddleware, getCustomerById);
+router.get('/:id/payments', authMiddleware, getCustomerPayments);
+router.get('/:id/reminders', authMiddleware, getCustomerReminders);
+// Write — ADMIN/MANAGER/CASHIER
+router.post('/', authMiddleware, authorize('ADMIN', 'MANAGER', 'CASHIER'), uploadCustomerAvatar.single('avatar'), createCustomer);
+router.put('/:id', authMiddleware, authorize('ADMIN', 'MANAGER', 'CASHIER'), uploadCustomerAvatar.single('avatar'), updateCustomer);
+router.delete('/:id', authMiddleware, authorize('ADMIN'), deleteCustomer);
+router.post('/:id/settle', authMiddleware, authorize('ADMIN', 'MANAGER'), settleCustomerDue);
+router.post('/:id/remind', authMiddleware, authorize('ADMIN', 'MANAGER', 'CASHIER'), sendCustomerReminder);
 
 export default router;

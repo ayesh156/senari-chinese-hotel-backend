@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import auditRoutes from './audit.routes';
 import authRoutes from './auth.routes';
 import foodRoutes from './food.routes';
 import categoryRoutes from './category.routes';
@@ -11,10 +12,13 @@ import purchaseOrderRoutes from './purchaseOrder.routes';
 import tableRoutes from './table.routes';
 import analyticsRoutes from './analytics.routes';
 import dashboardRoutes from './dashboard.routes';
+import invoiceRoutes from './invoice.routes';
 import settingsRoutes from './settings.routes';
+import userRoutes from './user.routes';
 
 const router = Router();
 
+router.use('/audit-logs', auditRoutes);
 router.use('/auth', authRoutes);
 router.use('/foods', foodRoutes);
 router.use('/categories', categoryRoutes);
@@ -27,6 +31,8 @@ router.use('/purchase-orders', purchaseOrderRoutes);
 router.use('/tables', tableRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/dashboard', dashboardRoutes);
+router.use('/invoices', invoiceRoutes);
 router.use('/settings', settingsRoutes);
+router.use('/users', userRoutes);
 
 export default router;

@@ -2,32 +2,64 @@ import bcrypt from 'bcryptjs';
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma';
 import { AuthService } from '../services/auth.service';
+import { AuditService, AuditActions, AuditEntities } from '../services/audit.service';
 import type { AuthRequest } from '../middlewares/auth.middleware';
 
+function getClientIp(req: Request): string | undefined {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string') return forwarded.split(',')[0].trim();
+  return req.socket?.remoteAddress;
+}
 /**
  * POST /api/auth/login
  * Authenticate user with email/password, return tokens + user data.
  */
 export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password } = req.body;
-    const result = await AuthService.login({ email, password });
+    const { email } = req.body;
+    const ip = getClientIp(req);
 
-    // Set refresh token as httpOnly cookie
-    res.cookie(
-      AuthService.COOKIE_NAME,
-      result.tokens.refreshToken,
-      AuthService.getCookieOptions() as any
-    );
+    try {
+      const result = await AuthService.login({ email, password: req.body.password });
 
-    res.json({
-      success: true,
-      data: {
-        user: result.user,
-        accessToken: result.tokens.accessToken,
-        refreshToken: result.tokens.refreshToken,
-      },
-    });
+      // Log successful login non-blocking
+      AuditService.login(
+        result.user.id,
+        result.user.name,
+        result.user.role,
+        ip,
+        true
+      );
+
+      // Set refresh token as httpOnly cookie
+      res.cookie(
+        AuthService.COOKIE_NAME,
+        result.tokens.refreshToken,
+        AuthService.getCookieOptions() as any
+      );
+
+      res.json({
+        success: true,
+        data: {
+          user: result.user,
+          accessToken: result.tokens.accessToken,
+          refreshToken: result.tokens.refreshToken,
+        },
+      });
+    } catch (loginError: any) {
+      // Log failed login attempt non-blocking
+      if (email) {
+        const failedUser = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+        AuditService.login(
+          failedUser?.id ?? 0,
+          failedUser?.name ?? email,
+          failedUser?.role ?? 'UNKNOWN',
+          ip,
+          false
+        );
+      }
+      throw loginError; // Re-throw to be handled by catch below
+    }
   } catch (error) {
     next(error);
   }
@@ -67,6 +99,14 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
       },
       select: { id: true, name: true, email: true, role: true },
     });
+
+    // Log user creation (non-blocking)
+    AuditService.created(
+      AuditEntities.USER,
+      user.id,
+      { name: user.name, email: user.email, role: user.role },
+      { ipAddress: getClientIp(req) }
+    );
 
     res.status(201).json({
       success: true,

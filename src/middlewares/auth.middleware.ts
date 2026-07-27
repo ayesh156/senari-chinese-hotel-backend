@@ -14,6 +14,29 @@ export interface AuthRequest extends Request {
 // ── Configuration ──────────────────────────────────────────────────────────────
 const JWT_SECRET: string = process.env.JWT_SECRET || 'senari-hotel-secret-key-change-in-production';
 
+/**
+ * Role hierarchy for permission inheritance.
+ * A role at a given level inherits permissions of all roles below it.
+ */
+const ROLE_HIERARCHY: Record<string, number> = {
+  STAFF: 0,
+  CASHIER: 1,
+  MANAGER: 2,
+  ADMIN: 3,
+};
+
+/**
+ * Check if a user's role has sufficient permissions.
+ * @param userRole - The role of the authenticated user
+ * @param requiredRole - The minimum role required
+ * @returns true if the user has sufficient permissions
+ */
+function hasMinRole(userRole: string, requiredRole: string): boolean {
+  const userLevel = ROLE_HIERARCHY[userRole] ?? -1;
+  const requiredLevel = ROLE_HIERARCHY[requiredRole] ?? 99;
+  return userLevel >= requiredLevel;
+}
+
 // ── Middleware: Protect Routes ──────────────────────────────────────────────────
 /**
  * Verifies the Bearer token from the Authorization header.
@@ -108,9 +131,10 @@ export const authMiddleware = async (
 // ── Middleware: Role-Based Authorization ────────────────────────────────────────
 /**
  * Restrict access based on user roles.
- * Pass allowed roles as arguments. SUPER_ADMIN bypasses all checks.
+ * Pass allowed roles as arguments. ADMIN bypasses all checks.
  *
  * Usage: router.get('/admin', authorize('ADMIN'), handler)
+ *        router.get('/manager', authorize('ADMIN', 'MANAGER'), handler)
  */
 export const authorize = (...roles: string[]) => {
   return (req: Request, _res: Response, next: NextFunction): void => {
@@ -130,10 +154,41 @@ export const authorize = (...roles: string[]) => {
       return;
     }
 
+    // Check if user's role is in the allowed list
     if (!roles.includes(authReq.user.role)) {
       _res.status(403).json({
         success: false,
-        error: 'Not authorized. Insufficient permissions.',
+        code: 'INSUFFICIENT_PERMISSIONS',
+        error: `Access denied. Required role: ${roles.join(' or ')}. Your role: ${authReq.user.role}.`,
+      });
+      return;
+    }
+
+    next();
+  };
+};
+
+/**
+ * Require a minimum role level using the hierarchy.
+ * Example: requireMinRole('MANAGER') allows ADMIN and MANAGER but not CASHIER/STAFF.
+ */
+export const requireMinRole = (minRole: string) => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    const authReq = req as AuthRequest;
+
+    if (!authReq.user) {
+      _res.status(403).json({
+        success: false,
+        error: 'Not authorized. No user context.',
+      });
+      return;
+    }
+
+    if (!hasMinRole(authReq.user.role, minRole)) {
+      _res.status(403).json({
+        success: false,
+        code: 'INSUFFICIENT_PERMISSIONS',
+        error: `Access denied. Minimum role required: ${minRole}. Your role: ${authReq.user.role}.`,
       });
       return;
     }

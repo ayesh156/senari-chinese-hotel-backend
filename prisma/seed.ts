@@ -64,21 +64,203 @@ async function main() {
   console.log(`   ✅ Created ${units.length} units`);
 
   // ── Food Items ────────────────────────────────────────────────────────────
+  // High-resolution Unsplash food image seeds with realistic nutritional data
   const foodItemsData = [
-    { name: 'Chicken Kottu', price: 890, description: 'Stir-fried flatbread with chicken, vegetables, and aromatic spices', categoryId: foodCategories[0].id, isNew: true, sortOrder: 1 },
-    { name: 'Egg Kottu', price: 690, description: 'Classic kottu roti with egg and vegetables', categoryId: foodCategories[0].id, sortOrder: 2 },
-    { name: 'Chicken Fried Rice', price: 850, description: 'Wok-fried rice with tender chicken pieces, egg, and vegetables', categoryId: foodCategories[1].id, sortOrder: 3 },
-    { name: 'Nasi Goreng', price: 950, description: 'Indonesian-style fried rice with fried egg, crackers, and sambal', categoryId: foodCategories[1].id, isNew: true, sortOrder: 4 },
-    { name: 'Chicken Noodles', price: 820, description: 'Egg noodles wok-tossed with chicken and seasonal vegetables', categoryId: foodCategories[2].id, sortOrder: 5 },
-    { name: 'Devilled Chicken', price: 1200, description: 'Crispy fried chicken tossed in spicy devilled sauce', categoryId: foodCategories[3].id, sortOrder: 6 },
-    { name: 'Sweet & Sour Fish', price: 1350, description: 'Deep-fried fish fillets in tangy sweet and sour sauce', categoryId: foodCategories[3].id, isNew: true, sortOrder: 7 },
-    { name: 'Watalappan', price: 350, description: 'Traditional Sri Lankan steamed coconut custard with jaggery', categoryId: foodCategories[4].id, sortOrder: 8 },
-    { name: 'Ice Cream Trio', price: 450, description: 'Three scoops of vanilla, chocolate, and strawberry ice cream', categoryId: foodCategories[4].id, sortOrder: 9 },
-    { name: 'Fresh Lime Juice', price: 250, description: 'Freshly squeezed lime juice with a hint of salt and sugar', categoryId: foodCategories[5].id, sortOrder: 10 },
-    { name: 'Mango Lassi', price: 350, description: 'Creamy yoghurt drink blended with ripe Alphonso mangoes', categoryId: foodCategories[5].id, isNew: true, sortOrder: 11 },
-    { name: 'Chicken Curry & Rice', price: 1100, description: 'Fragrant Sri Lankan chicken curry served with steamed rice', categoryId: foodCategories[1].id, sortOrder: 12 },
+    // Street Food
+    {
+      name: 'Chicken Kottu', price: 890, description: 'Stir-fried flatbread with chicken, vegetables, and aromatic spices',
+      categoryId: foodCategories[0].id, isNew: false, isFeatured: true, sortOrder: 1,
+      prepTimeMinutes: 15, calories: 620, isHealthy: false,
+      serves: '1-2 persons', ingredients: ['Flatbread (Roti)', 'Chicken', 'Cabbage', 'Carrots', 'Egg', 'Spices'],
+      image: 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=800&auto=format&fit=crop&q=80',
+    },
+    {
+      name: 'Egg Kottu', price: 690, description: 'Classic kottu roti with egg and vegetables',
+      categoryId: foodCategories[0].id, sortOrder: 2, isNew: false, isFeatured: false,
+      prepTimeMinutes: 12, calories: 530, isHealthy: false,
+      serves: '1 person', ingredients: ['Flatbread (Roti)', 'Egg', 'Cabbage', 'Carrots', 'Onions', 'Spices'],
+      image: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=800&auto=format&fit=crop&q=80',
+    },
+    {
+      name: 'Cheese Kottu', price: 950, description: 'Indulgent kottu loaded with melted cheese, chicken and smoky devilled sauce',
+      categoryId: foodCategories[0].id, isNew: true, isFeatured: false, sortOrder: 3,
+      prepTimeMinutes: 15, calories: 680, isHealthy: false,
+      serves: '1-2 persons', ingredients: ['Flatbread (Roti)', 'Chicken', 'Mozzarella Cheese', 'Bell Peppers', 'Devilled Sauce'],
+      image: 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=800&auto=format&fit=crop&q=80',
+    },
+    {
+      name: 'Vegetable Kottu', price: 650, description: 'Shredded roti stir-fried with seasonal vegetables, egg and curry sauce',
+      categoryId: foodCategories[0].id, isNew: false, isFeatured: false, sortOrder: 4,
+      prepTimeMinutes: 12, calories: 480, isHealthy: true,
+      serves: '1 person', ingredients: ['Flatbread (Roti)', 'Cabbage', 'Carrots', 'Egg', 'Leeks', 'Curry Spices'],
+      image: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=800&auto=format&fit=crop&q=80',
+    },
+    // Rice Dishes
+    {
+      name: 'Chicken Fried Rice', price: 850, description: 'Wok-fried rice with tender chicken pieces, egg, and vegetables',
+      categoryId: foodCategories[1].id, sortOrder: 5, isNew: false, isFeatured: true,
+      prepTimeMinutes: 14, calories: 580, isHealthy: false,
+      serves: '1-2 persons', ingredients: ['Steamed Rice', 'Chicken', 'Egg', 'Carrots', 'Green Beans', 'Soy Sauce'],
+      image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=800&auto=format&fit=crop&q=80',
+    },
+    {
+      name: 'Nasi Goreng', price: 950, description: 'Indonesian-style fried rice with fried egg, crackers, and sambal',
+      categoryId: foodCategories[1].id, isNew: true, isFeatured: false, sortOrder: 6,
+      prepTimeMinutes: 16, calories: 620, isHealthy: false,
+      serves: '1-2 persons', ingredients: ['Steamed Rice', 'Fried Egg', 'Shrimp Crackers', 'Sambal', 'Chicken Satay', 'Cucumber'],
+      image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=800&auto=format&fit=crop&q=80',
+    },
+    {
+      name: 'Prawn Fried Rice', price: 1050, description: 'Fragrant rice stir-fried with juicy prawns, egg and vegetables',
+      categoryId: foodCategories[1].id, isNew: true, isFeatured: false, sortOrder: 7,
+      prepTimeMinutes: 16, calories: 560, isHealthy: false,
+      serves: '1-2 persons', ingredients: ['Steamed Rice', 'Prawns', 'Egg', 'Garlic', 'Spring Onion', 'Soy Sauce'],
+      image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=800&auto=format&fit=crop&q=80',
+    },
+    {
+      name: 'Chicken Curry & Rice', price: 1100, description: 'Fragrant Sri Lankan chicken curry served with steamed rice',
+      categoryId: foodCategories[1].id, sortOrder: 8, isNew: false, isFeatured: true,
+      prepTimeMinutes: 20, calories: 650, isHealthy: false,
+      serves: '1 person', ingredients: ['Chicken Thighs', 'Steamed Rice', 'Coconut Milk', 'Curry Leaves', 'Cinnamon', 'Chilli Powder'],
+      image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=800&auto=format&fit=crop&q=80',
+    },
+    // Noodles
+    {
+      name: 'Chicken Noodles', price: 820, description: 'Egg noodles wok-tossed with chicken and seasonal vegetables',
+      categoryId: foodCategories[2].id, sortOrder: 9, isNew: false, isFeatured: true,
+      prepTimeMinutes: 14, calories: 530, isHealthy: false,
+      serves: '1-2 persons', ingredients: ['Egg Noodles', 'Chicken', 'Cabbage', 'Carrots', 'Soy Sauce', 'Garlic'],
+      image: 'https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=800&auto=format&fit=crop&q=80',
+    },
+    {
+      name: 'Seafood Noodles', price: 1100, description: 'Silky egg noodles with fresh prawns, squid and fish in garlic-ginger sauce',
+      categoryId: foodCategories[2].id, isNew: true, isFeatured: false, sortOrder: 10,
+      prepTimeMinutes: 18, calories: 480, isHealthy: true,
+      serves: '1-2 persons', ingredients: ['Egg Noodles', 'Prawns', 'Squid', 'Fish', 'Ginger', 'Garlic Sauce'],
+      image: 'https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=800&auto=format&fit=crop&q=80',
+    },
+    {
+      name: 'Egg Fried Noodles', price: 720, description: 'Classic egg noodles wok-fried with scrambled egg and spring onion',
+      categoryId: foodCategories[2].id, isNew: false, isFeatured: false, sortOrder: 11,
+      prepTimeMinutes: 10, calories: 510, isHealthy: false,
+      serves: '1 person', ingredients: ['Egg Noodles', 'Egg', 'Spring Onion', 'Soy Sauce', 'Sesame Oil'],
+      image: 'https://images.unsplash.com/photo-1555126634-323283e090fa?w=800&auto=format&fit=crop&q=80',
+    },
+    // Mains
+    {
+      name: 'Devilled Chicken', price: 1200, description: 'Crispy fried chicken tossed in spicy devilled sauce',
+      categoryId: foodCategories[3].id, sortOrder: 12, isNew: false, isFeatured: true,
+      prepTimeMinutes: 20, calories: 590, isHealthy: false,
+      serves: '1-2 persons', ingredients: ['Chicken', 'Bell Peppers', 'Onions', 'Chilli Sauce', 'Tomato Ketchup', 'Soy Sauce'],
+      image: 'https://images.unsplash.com/photo-1527477396000-e27163b481c2?w=800&auto=format&fit=crop&q=80',
+    },
+    {
+      name: 'Sweet & Sour Fish', price: 1350, description: 'Deep-fried fish fillets in tangy sweet and sour sauce',
+      categoryId: foodCategories[3].id, isNew: true, isFeatured: false, sortOrder: 13,
+      prepTimeMinutes: 22, calories: 520, isHealthy: false,
+      serves: '1-2 persons', ingredients: ['Fish Fillets', 'Pineapple', 'Capsicum', 'Tomato Sauce', 'Vinegar', 'Sugar'],
+      image: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800&auto=format&fit=crop&q=80',
+    },
+    {
+      name: 'Prawn Curry', price: 1350, description: 'Plump tiger prawns slow-cooked in rich coconut milk curry',
+      categoryId: foodCategories[3].id, isNew: false, isFeatured: false, sortOrder: 14,
+      prepTimeMinutes: 22, calories: 420, isHealthy: true,
+      serves: '1-2 persons', ingredients: ['Tiger Prawns', 'Coconut Milk', 'Curry Leaves', 'Turmeric', 'Chilli', 'Mustard Seeds'],
+      image: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800&auto=format&fit=crop&q=80',
+    },
+    {
+      name: 'Fish Ambul Thiyal', price: 1150, description: 'Bold, tangy dry fish curry with goraka and roasted spices',
+      categoryId: foodCategories[3].id, isNew: false, isFeatured: false, sortOrder: 15,
+      prepTimeMinutes: 25, calories: 380, isHealthy: true,
+      serves: '1-2 persons', ingredients: ['Tuna', 'Goraka', 'Roasted Curry Powder', 'Garlic', 'Pandan Leaves'],
+      image: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800&auto=format&fit=crop&q=80',
+    },
+    {
+      name: 'Dhal Curry', price: 480, description: 'Creamy red lentil curry tempered with mustard seeds and coconut milk',
+      categoryId: foodCategories[3].id, isNew: false, isFeatured: false, sortOrder: 16,
+      prepTimeMinutes: 15, calories: 340, isHealthy: true,
+      serves: '1 person', ingredients: ['Red Lentils', 'Coconut Milk', 'Mustard Seeds', 'Curry Leaves', 'Turmeric', 'Onion'],
+      image: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800&auto=format&fit=crop&q=80',
+    },
+    // Desserts
+    {
+      name: 'Watalappan', price: 350, description: 'Traditional Sri Lankan steamed coconut custard with jaggery',
+      categoryId: foodCategories[4].id, sortOrder: 17, isNew: false, isFeatured: true,
+      prepTimeMinutes: 5, calories: 310, isHealthy: false,
+      serves: '1 person', ingredients: ['Coconut Milk', 'Jaggery', 'Eggs', 'Cardamom', 'Cashew Nuts'],
+      image: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=800&auto=format&fit=crop&q=80',
+    },
+    {
+      name: 'Ice Cream Trio', price: 450, description: 'Three scoops of vanilla, chocolate, and strawberry ice cream',
+      categoryId: foodCategories[4].id, sortOrder: 18, isNew: false, isFeatured: false,
+      prepTimeMinutes: 3, calories: 350, isHealthy: false,
+      serves: '1 person', ingredients: ['Vanilla Ice Cream', 'Chocolate Ice Cream', 'Strawberry Ice Cream', 'Wafer'],
+      image: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=800&auto=format&fit=crop&q=80',
+    },
+    {
+      name: 'Curd & Treacle', price: 320, description: 'Thick buffalo curd served with golden kithul treacle',
+      categoryId: foodCategories[4].id, isNew: false, isFeatured: false, sortOrder: 19,
+      prepTimeMinutes: 3, calories: 260, isHealthy: true,
+      serves: '1 person', ingredients: ['Buffalo Curd', 'Kithul Treacle'],
+      image: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=800&auto=format&fit=crop&q=80',
+    },
+    {
+      name: 'Coconut Ice Cream', price: 420, description: 'House-made coconut ice cream with pandan and toasted coconut',
+      categoryId: foodCategories[4].id, isNew: true, isFeatured: false, sortOrder: 20,
+      prepTimeMinutes: 3, calories: 290, isHealthy: false,
+      serves: '1 person', ingredients: ['Coconut Cream', 'Sugar', 'Pandan Leaves', 'Toasted Coconut Flakes'],
+      image: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=800&auto=format&fit=crop&q=80',
+    },
+    // Beverages
+    {
+      name: 'Fresh Lime Juice', price: 250, description: 'Freshly squeezed lime juice with a hint of salt and sugar',
+      categoryId: foodCategories[5].id, sortOrder: 21, isNew: false, isFeatured: false,
+      prepTimeMinutes: 5, calories: 90, isHealthy: true,
+      serves: '1 person', ingredients: ['Fresh Lime', 'Sugar', 'Salt', 'Mint Leaves', 'Ice'],
+      image: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=800&auto=format&fit=crop&q=80',
+    },
+    {
+      name: 'Mango Lassi', price: 350, description: 'Creamy yoghurt drink blended with ripe Alphonso mangoes',
+      categoryId: foodCategories[5].id, isNew: true, isFeatured: false, sortOrder: 22,
+      prepTimeMinutes: 5, calories: 210, isHealthy: false,
+      serves: '1 person', ingredients: ['Mango', 'Yoghurt', 'Milk', 'Sugar', 'Cardamom'],
+      image: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=800&auto=format&fit=crop&q=80',
+    },
+    {
+      name: 'King Coconut', price: 180, description: 'Fresh Sri Lankan king coconut water — naturally sweet and hydrating',
+      categoryId: foodCategories[5].id, isNew: false, isFeatured: false, sortOrder: 23,
+      prepTimeMinutes: 2, calories: 45, isHealthy: true,
+      serves: '1 person', ingredients: ['King Coconut Water', 'Coconut'],
+      image: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=800&auto=format&fit=crop&q=80',
+    },
+    {
+      name: 'Ceylon Tea', price: 150, description: 'Freshly brewed high-grown Ceylon tea with milk and sugar',
+      categoryId: foodCategories[5].id, isNew: false, isFeatured: false, sortOrder: 24,
+      prepTimeMinutes: 5, calories: 10, isHealthy: true,
+      serves: '1 person', ingredients: ['Ceylon Tea Leaves', 'Milk', 'Sugar'],
+      image: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=800&auto=format&fit=crop&q=80',
+    },
   ];
-  const foodItems = await Promise.all(foodItemsData.map((item) => prisma.foodItem.create({ data: { ...item, isAvailable: true, isNew: item.isNew ?? false } })));
+  const foodItems = await Promise.all(foodItemsData.map((item) =>
+    prisma.foodItem.create({
+      data: {
+        name: item.name,
+        price: item.price,
+        description: item.description,
+        categoryId: item.categoryId,
+        image: item.image,
+        prepTimeMinutes: item.prepTimeMinutes,
+        calories: item.calories,
+        serves: item.serves ?? "1-2 persons",
+        ingredients: item.ingredients ?? [],
+        isHealthy: item.isHealthy,
+        isNew: item.isNew ?? false,
+        isFeatured: item.isFeatured ?? false,
+        isAvailable: true,
+        sortOrder: item.sortOrder,
+      },
+    })
+  ));
   console.log(`   ✅ Created ${foodItems.length} food items`);
 
   // ── Inventory Items ──────────────────────────────────────────────────────
@@ -162,9 +344,8 @@ async function main() {
 
   // ── Helper: Random date in month ──────────────────────────────────
   function getRandomDateInMonth(year: number, month: number): Date {
-    // month is 0-indexed (3=April, 4=May, 5=June)
     const date = new Date(year, month, Math.floor(Math.random() * 28) + 1);
-    date.setHours(Math.floor(Math.random() * 12) + 10, Math.floor(Math.random() * 60)); // Lunch/Dinner 10am-10pm
+    date.setHours(Math.floor(Math.random() * 12) + 10, Math.floor(Math.random() * 60));
     return date;
   }
 
@@ -184,11 +365,10 @@ async function main() {
   let invoiceSeq = 582910;
   let ordersApril = 0, ordersMay = 0, ordersJune = 0;
 
-  // Define monthly configs: [year, monthIndex, targetCount]
   const monthlyConfigs = [
-    [2026, 3, 20],  // April: 20 orders
-    [2026, 4, 22],  // May: 22 orders
-    [2026, 5, 25],  // June: 25 orders (up to today)
+    [2026, 3, 20],
+    [2026, 4, 22],
+    [2026, 5, 25],
   ];
 
   for (const [year, monthIdx, targetCount] of monthlyConfigs) {
@@ -201,15 +381,14 @@ async function main() {
       const customerMatch = customers.find(c => c.name === customerName);
       const customerId = customerMatch ? customerMatch.id : null;
 
-      // Random 2-4 food items per order
       const selectedFoods = pickRandom(foodItems, 2, 4);
       const items = selectedFoods.map((f) => {
-        const qty = 1 + Math.floor(Math.random() * 3); // 1-3 qty per item
+        const qty = 1 + Math.floor(Math.random() * 3);
         const unitPrice = Number(f.price);
         return { foodId: f.id, quantity: qty, unitPrice, subtotal: unitPrice * qty };
       });
       const subtotal = Math.round(items.reduce((s, item) => s + item.subtotal, 0));
-      const discountPct = Math.random() > 0.6 ? Math.floor(Math.random() * 10) : 0; // 0-10% discount sometimes
+      const discountPct = Math.random() > 0.6 ? Math.floor(Math.random() * 10) : 0;
       const discount = Math.round(subtotal * discountPct / 100);
       const total = subtotal - discount;
       const amountPaid = payStatus === 'PAID' ? total : payStatus === 'PARTIAL' ? Math.round(total * 0.6) : 0;
@@ -226,7 +405,7 @@ async function main() {
           amountPaid,
           customerId,
           createdAt,
-          updatedAt: new Date(createdAt.getTime() + 3600000), // 1hr later
+          updatedAt: new Date(createdAt.getTime() + 3600000),
           notes: JSON.stringify({ customerName }),
           items: { create: items },
         },
@@ -285,7 +464,7 @@ async function main() {
   console.log('   ✅ Created supplier payments & reminders (ledger history)');
 
   // ── Restaurant Tables ──────────────────────────────────────────────────
-  const tableData = [
+  const tableData: { tableNumber: string; capacity: number; status: 'AVAILABLE' | 'OCCUPIED' | 'RESERVED'; notes: string | null }[] = [
     { tableNumber: 'T1', capacity: 2, status: 'AVAILABLE', notes: 'Window side' },
     { tableNumber: 'T2', capacity: 4, status: 'AVAILABLE', notes: 'Near entrance' },
     { tableNumber: 'T3', capacity: 4, status: 'OCCUPIED', notes: null },

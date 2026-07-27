@@ -2,6 +2,7 @@
 
 enum UserRole {
   ADMIN
+  MANAGER
   CASHIER
   STAFF
 }
@@ -95,7 +96,13 @@ model FoodItem {
   categoryId Int
   category Category @relation("FoodCategory", fields: [categoryId], references: [id])
   image String?
+  prepTimeMinutes Int @default(15)
+  calories Int @default(450)
+  serves String @default("1-2 persons")
+  ingredients Json @default("[]")
+  isHealthy Boolean @default(false)
   isNew Boolean @default(false)
+  isFeatured Boolean @default(false)
   isAvailable Boolean @default(true)
   sortOrder Int @default(0)
   createdAt DateTime @default(now())
@@ -279,6 +286,25 @@ model PurchaseOrderItem {
   unitPrice Decimal @db.Decimal(10, 2)
   subTotal Decimal @db.Decimal(10, 2)
   @@map("purchase_order_items")
+}
+
+// ── Audit Log ───────────────────────────────────────────────────────────────────
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    Int?
+  userName  String   @default("")
+  userRole  String   @default("")
+  action    String   // CREATE, UPDATE, DELETE, LOGIN, PRICE_CHANGE, INVENTORY_ADJUSTMENT, STATUS_CHANGE
+  entity    String   // Order, FoodItem, Inventory, User, Invoice, Settings, Category, Unit, Customer, Supplier, PurchaseOrder
+  entityId  String?
+  details   Json?    // old vs new values or description of changes
+  ipAddress String?
+  createdAt DateTime @default(now())
+  @@index([createdAt(sort: Desc)])
+  @@index([action])
+  @@index([entity])
+  @@index([userId])
+  @@map("audit_logs")
 }
 
 // ── System Settings (Singleton) ─────────────────────────────────────────────────

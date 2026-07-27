@@ -180,16 +180,19 @@ export class AnalyticsService {
   }
 
   /**
-   * getRevenueChartData — Aggregated revenue grouped by date for last 7 days
-   * Uses Prisma's raw query with GROUP BY for maximum efficiency
+   * getRevenueChartData — Aggregated revenue grouped by date
+   * Respects optional dateFilter; falls back to last 7 days when none provided.
    */
-  static async getRevenueChartData() {
-    const cacheKey = 'revenue_chart';
+  static async getRevenueChartData(dateFilter?: DateFilter) {
+    const cacheKey = `revenue_chart_${dateFilter?.filterType || 'week'}_${dateFilter?.startDate || ''}_${dateFilter?.endDate || ''}`;
     const cached = this.getCached<RevenueChartEntry[]>(cacheKey);
     if (cached) return cached;
 
+    const dateWhere = buildDateWhere(dateFilter);
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 86_400_000);
+    const startDate = dateWhere.createdAt?.gte || sevenDaysAgo;
+    const endDate = dateWhere.createdAt?.lte || now;
 
     // Use raw query for efficient GROUP BY on date
     const rows = await prisma.$queryRawUnsafe<Array<{
@@ -203,11 +206,13 @@ export class AnalyticsService {
         COUNT(*) as orderCount
       FROM orders
       WHERE createdAt >= ? 
+        AND createdAt <= ?
         AND paymentStatus IN ('PAID', 'PARTIAL')
         AND status != 'CANCELLED'
       GROUP BY DATE(createdAt)
       ORDER BY date ASC`,
-      sevenDaysAgo
+      startDate,
+      endDate
     );
 
     // Build the 7-day array with 0-fill for missing days
@@ -246,15 +251,18 @@ export class AnalyticsService {
   }
 
   /**
-   * getTopCategories — Revenue aggregated per food category for the last 7 days
+   * getTopCategories — Revenue aggregated per food category, respects dateFilter
    */
-  static async getTopCategories() {
-    const cacheKey = 'top_categories';
+  static async getTopCategories(dateFilter?: DateFilter) {
+    const cacheKey = `top_categories_${dateFilter?.filterType || 'week'}_${dateFilter?.startDate || ''}_${dateFilter?.endDate || ''}`;
     const cached = this.getCached<TopCategoryEntry[]>(cacheKey);
     if (cached) return cached;
 
+    const dateWhere = buildDateWhere(dateFilter);
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 86_400_000);
+    const startDate = dateWhere.createdAt?.gte || sevenDaysAgo;
+    const endDate = dateWhere.createdAt?.lte || now;
 
     // Efficient join: OrderItem -> FoodItem -> Category aggregated by category
     const raw = await prisma.$queryRawUnsafe<Array<{
@@ -271,12 +279,14 @@ export class AnalyticsService {
       JOIN categories c ON c.id = fi.categoryId AND c.type = 'FOOD'
       JOIN orders o ON o.id = oi.orderId
       WHERE o.createdAt >= ?
+        AND o.createdAt <= ?
         AND o.paymentStatus IN ('PAID', 'PARTIAL')
         AND o.status != 'CANCELLED'
       GROUP BY c.id, c.name
       ORDER BY revenue DESC
       LIMIT 10`,
-      sevenDaysAgo
+      startDate,
+      endDate
     );
 
     const totalRevenue = raw.reduce((s, r) => s + Number(r.revenue || 0), 0) || 1;
@@ -296,15 +306,18 @@ export class AnalyticsService {
   }
 
   /**
-   * getFoodRankings — Top and least selling foods for the last 7 days
+   * getFoodRankings — Top and least selling foods, respects dateFilter
    */
-  static async getFoodRankings() {
-    const cacheKey = 'food_rankings';
+  static async getFoodRankings(dateFilter?: DateFilter) {
+    const cacheKey = `food_rankings_${dateFilter?.filterType || 'week'}_${dateFilter?.startDate || ''}_${dateFilter?.endDate || ''}`;
     const cached = this.getCached<FoodRankingResponse>(cacheKey);
     if (cached) return cached;
 
+    const dateWhere = buildDateWhere(dateFilter);
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 86_400_000);
+    const startDate = dateWhere.createdAt?.gte || sevenDaysAgo;
+    const endDate = dateWhere.createdAt?.lte || now;
 
     const raw = await prisma.$queryRawUnsafe<Array<{
       foodId: number;
@@ -324,11 +337,13 @@ export class AnalyticsService {
       JOIN categories c ON c.id = fi.categoryId AND c.type = 'FOOD'
       JOIN orders o ON o.id = oi.orderId
       WHERE o.createdAt >= ?
+        AND o.createdAt <= ?
         AND o.paymentStatus IN ('PAID', 'PARTIAL')
         AND o.status != 'CANCELLED'
       GROUP BY fi.id, fi.name, c.name
       ORDER BY qty DESC`,
-      sevenDaysAgo
+      startDate,
+      endDate
     );
 
     const foods = raw.map(r => ({
@@ -348,15 +363,18 @@ export class AnalyticsService {
   }
 
   /**
-   * getHourlyTraffic — Groups orders by hour for peak-time visualization
+   * getHourlyTraffic — Groups orders by hour for peak-time visualization, respects dateFilter
    */
-  static async getHourlyTraffic() {
-    const cacheKey = 'hourly_traffic';
+  static async getHourlyTraffic(dateFilter?: DateFilter) {
+    const cacheKey = `hourly_traffic_${dateFilter?.filterType || 'week'}_${dateFilter?.startDate || ''}_${dateFilter?.endDate || ''}`;
     const cached = this.getCached<HourlyTrafficEntry[]>(cacheKey);
     if (cached) return cached;
 
+    const dateWhere = buildDateWhere(dateFilter);
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 86_400_000);
+    const startDate = dateWhere.createdAt?.gte || sevenDaysAgo;
+    const endDate = dateWhere.createdAt?.lte || now;
 
     const raw = await prisma.$queryRawUnsafe<Array<{
       hour: number;
@@ -369,11 +387,13 @@ export class AnalyticsService {
         COALESCE(SUM(total), 0) as revenue
       FROM orders
       WHERE createdAt >= ?
+        AND createdAt <= ?
         AND paymentStatus IN ('PAID', 'PARTIAL')
         AND status != 'CANCELLED'
       GROUP BY HOUR(createdAt)
       ORDER BY hour ASC`,
-      sevenDaysAgo
+      startDate,
+      endDate
     );
 
     const hourMap = new Map<number, { count: number; revenue: number }>();
@@ -403,18 +423,21 @@ export class AnalyticsService {
   }
 
   /**
-   * getInventoryEfficiency — Calculates turnover ratio and stale items
+   * getInventoryEfficiency — Calculates turnover ratio and stale items, respects dateFilter for COGS
    */
-  static async getInventoryEfficiency() {
-    const cacheKey = 'inventory_efficiency';
+  static async getInventoryEfficiency(dateFilter?: DateFilter) {
+    const cacheKey = `inventory_efficiency_${dateFilter?.filterType || 'week'}_${dateFilter?.startDate || ''}_${dateFilter?.endDate || ''}`;
     const cached = this.getCached<InventoryEfficiencyResponse>(cacheKey);
     if (cached) return cached;
 
+    const dateWhere = buildDateWhere(dateFilter);
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 86_400_000);
     const sevenDaysAgo = new Date(now.getTime() - 7 * 86_400_000);
+    const startDate = dateWhere.createdAt?.gte || sevenDaysAgo;
+    const endDate = dateWhere.createdAt?.lte || now;
 
-    // 1. COGS for last 7 days (using averageCost * qty sold estimate)
+    // 1. COGS for the filtered period (using averageCost * qty sold estimate)
     // We estimate ingredient usage from order items
     const cogsResult = await prisma.$queryRawUnsafe<Array<{ totalCogs: number }>>(
       `SELECT COALESCE(SUM(oi.quantity * fi.price * 0.42), 0) as totalCogs
@@ -422,9 +445,11 @@ export class AnalyticsService {
        JOIN food_items fi ON fi.id = oi.foodId
        JOIN orders o ON o.id = oi.orderId
        WHERE o.createdAt >= ?
+         AND o.createdAt <= ?
          AND o.paymentStatus IN ('PAID', 'PARTIAL')
          AND o.status != 'CANCELLED'`,
-      sevenDaysAgo
+      startDate,
+      endDate
     );
     const cogs = Number(cogsResult[0]?.totalCogs || 0);
 
@@ -488,15 +513,18 @@ export class AnalyticsService {
 
   /**
    * getPaymentDistribution — Groups revenue by Order type (proxy for payment method)
-   * DINE_IN = Cash, TAKEAWAY = Card, DELIVERY = Online
+   * DINE_IN = Cash, TAKEAWAY = Card, DELIVERY = Online, respects dateFilter
    */
-  static async getPaymentDistribution() {
-    const cacheKey = 'payment_distribution';
+  static async getPaymentDistribution(dateFilter?: DateFilter) {
+    const cacheKey = `payment_distribution_${dateFilter?.filterType || 'week'}_${dateFilter?.startDate || ''}_${dateFilter?.endDate || ''}`;
     const cached = this.getCached<PaymentDistributionEntry[]>(cacheKey);
     if (cached) return cached;
 
+    const dateWhere = buildDateWhere(dateFilter);
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 86_400_000);
+    const startDate = dateWhere.createdAt?.gte || sevenDaysAgo;
+    const endDate = dateWhere.createdAt?.lte || now;
 
     const raw = await prisma.$queryRawUnsafe<Array<{
       paymentMethod: string;
@@ -514,11 +542,13 @@ export class AnalyticsService {
         COUNT(*) as orderCount
       FROM orders
       WHERE createdAt >= ?
+        AND createdAt <= ?
         AND paymentStatus IN ('PAID', 'PARTIAL')
         AND status != 'CANCELLED'
       GROUP BY paymentMethod
       ORDER BY revenue DESC`,
-      sevenDaysAgo
+      startDate,
+      endDate
     );
 
     const totalRevenue = raw.reduce((s, r) => s + Number(r.revenue || 0), 0) || 1;
@@ -550,15 +580,18 @@ export class AnalyticsService {
 
   /**
    * getMostProfitableFoods — Calculates profit per dish using price vs COGS estimate
-   * Profit = SUM((unitPrice - costEstimate) * quantity) for each food item
+   * Profit = SUM((unitPrice - costEstimate) * quantity) for each food item, respects dateFilter
    */
-  static async getMostProfitableFoods() {
-    const cacheKey = 'most_profitable_foods';
+  static async getMostProfitableFoods(dateFilter?: DateFilter) {
+    const cacheKey = `most_profitable_foods_${dateFilter?.filterType || 'week'}_${dateFilter?.startDate || ''}_${dateFilter?.endDate || ''}`;
     const cached = this.getCached<ProfitableFoodEntry[]>(cacheKey);
     if (cached) return cached;
 
+    const dateWhere = buildDateWhere(dateFilter);
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 86_400_000);
+    const startDate = dateWhere.createdAt?.gte || sevenDaysAgo;
+    const endDate = dateWhere.createdAt?.lte || now;
 
     const raw = await prisma.$queryRawUnsafe<Array<{
       foodId: number;
@@ -580,12 +613,14 @@ export class AnalyticsService {
       JOIN categories c ON c.id = fi.categoryId AND c.type = 'FOOD'
       JOIN orders o ON o.id = oi.orderId
       WHERE o.createdAt >= ?
+        AND o.createdAt <= ?
         AND o.paymentStatus IN ('PAID', 'PARTIAL')
         AND o.status != 'CANCELLED'
       GROUP BY fi.id, fi.name, c.name
       HAVING qty > 0
       ORDER BY revenue DESC`,
-      sevenDaysAgo
+      startDate,
+      endDate
     );
 
     // Average cost ratio: 0.42 (42% of dish price is ingredient cost)

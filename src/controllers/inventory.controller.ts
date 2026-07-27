@@ -1,5 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
+import type { AuthRequest } from '../middlewares/auth.middleware';
 import { InventoryService } from '../services/inventory.service';
+import { AuditService, AuditEntities, AuditActions } from '../services/audit.service';
+
+function auditCtx(authReq: AuthRequest) {
+  return { userId: authReq.user?.userId, userName: authReq.user?.email ?? undefined, userRole: authReq.user?.role ?? undefined };
+}
 
 export const getInventoryItems = async (_req: Request, res: Response, next: NextFunction) => {
   try {
@@ -42,6 +48,16 @@ export const createInventoryItem = async (req: Request, res: Response, next: Nex
       minAlertLevel: minAlertLevel !== undefined ? parseFloat(minAlertLevel) : undefined,
       unitPrice: unitPrice !== undefined ? parseFloat(unitPrice) : undefined,
     });
+
+    // Non-blocking audit
+    const authReq = req as AuthRequest;
+    AuditService.created(
+      AuditEntities.INVENTORY,
+      item.id,
+      { sku, name, quantity, unitPrice },
+      auditCtx(authReq)
+    );
+
     res.status(201).json({ success: true, data: item });
   } catch (error) {
     next(error);
@@ -61,6 +77,16 @@ export const updateInventoryItem = async (req: Request, res: Response, next: Nex
       minAlertLevel: minAlertLevel !== undefined ? parseFloat(minAlertLevel) : undefined,
       unitPrice: unitPrice !== undefined ? parseFloat(unitPrice) : undefined,
     });
+
+    // Non-blocking audit
+    const authReq = req as AuthRequest;
+    AuditService.updated(
+      AuditEntities.INVENTORY,
+      id,
+      { sku, name, changes: Object.keys(req.body).filter(k => k !== 'id') },
+      auditCtx(authReq)
+    );
+
     res.json({ success: true, data: item });
   } catch (error) {
     next(error);
@@ -76,6 +102,17 @@ export const adjustInventoryItemStock = async (req: Request, res: Response, next
       adjustmentType: adjustmentType || 'Manual Adjustment',
       notes: notes || undefined,
     });
+
+    // Non-blocking audit
+    const authReq = req as AuthRequest;
+    AuditService.log({
+      ...auditCtx(authReq),
+      action: AuditActions.INVENTORY_ADJUSTMENT,
+      entity: AuditEntities.INVENTORY,
+      entityId: id,
+      details: { newQuantity, adjustmentType, notes, itemName: item?.name },
+    });
+
     res.json({ success: true, data: item });
   } catch (error) {
     next(error);
@@ -85,7 +122,19 @@ export const adjustInventoryItemStock = async (req: Request, res: Response, next
 export const deleteInventoryItem = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = parseInt(req.params.id as string, 10);
+    const authReq = req as AuthRequest;
+    const oldItem = await InventoryService.getById(id).catch(() => null);
+
     await InventoryService.delete(id);
+
+    // Non-blocking audit
+    AuditService.deleted(
+      AuditEntities.INVENTORY,
+      id,
+      { name: oldItem?.name, sku: oldItem?.sku },
+      auditCtx(authReq)
+    );
+
     res.json({ success: true, data: null });
   } catch (error) {
     next(error);

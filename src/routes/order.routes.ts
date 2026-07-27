@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { authMiddleware, authorize } from '../middlewares/auth.middleware';
 import {
   getOrders,
   getLiveOrders,
@@ -11,19 +12,19 @@ import {
 
 const router = Router();
 
-// GET /api/orders — fetch all orders with items
-router.get('/', getOrders);
-// GET /api/orders/live — active orders (not COMPLETED)
-router.get('/live', getLiveOrders);
-// GET /api/orders/:id — single order
-router.get('/:id', getOrderById);
-// POST /api/orders — create order (dynamic payment status)
-router.post('/', createOrder);
-// PUT /api/orders/:id — update order (edit flow)
-router.put('/:id', updateOrder);
-// PUT /api/orders/:id/status — update order status with Socket.io
-router.put('/:id/status', updateOrderStatus);
-// DELETE /api/orders/:id — safe cascade
-router.delete('/:id', deleteOrder);
+// GET /api/orders — all authenticated can view
+router.get('/', authMiddleware, getOrders);
+// GET /api/orders/live — active orders
+router.get('/live', authMiddleware, getLiveOrders);
+// GET /api/orders/:id
+router.get('/:id', authMiddleware, getOrderById);
+// POST /api/orders — any authenticated staff can create orders
+router.post('/', authMiddleware, createOrder);
+// PUT /api/orders/:id — ADMIN/MANAGER can update orders
+router.put('/:id', authMiddleware, authorize('ADMIN', 'MANAGER'), updateOrder);
+// PUT /api/orders/:id/status — staff can update order status
+router.put('/:id/status', authMiddleware, updateOrderStatus);
+// DELETE /api/orders/:id — ADMIN only
+router.delete('/:id', authMiddleware, authorize('ADMIN'), deleteOrder);
 
 export default router;

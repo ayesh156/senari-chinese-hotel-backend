@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { authMiddleware, authorize } from '../middlewares/auth.middleware';
 import {
   getDashboardSummary,
   getTodaySales,
@@ -11,12 +12,13 @@ import {
 
 const router = Router();
 
-router.get('/summary', getDashboardSummary);
-router.get('/sales', getTodaySales);
-router.get('/tables', getOccupiedTables);
-router.get('/low-stock', getLowStockAlerts);
-router.get('/payables', getPendingPayables);
-router.get('/sales-trend', getTodaySalesTrend);
-router.get('/popular-categories', getPopularCategories);
+// Dashboard data — all authenticated roles can view
+router.get('/summary', authMiddleware, getDashboardSummary);
+router.get('/sales', authMiddleware, getTodaySales);
+router.get('/tables', authMiddleware, getOccupiedTables);
+router.get('/low-stock', authMiddleware, getLowStockAlerts);
+router.get('/payables', authMiddleware, getPendingPayables);
+router.get('/sales-trend', authMiddleware, getTodaySalesTrend);
+router.get('/popular-categories', authMiddleware, getPopularCategories);
 
 export default router;
