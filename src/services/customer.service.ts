@@ -123,7 +123,7 @@ export class CustomerService {
     return prisma.$transaction(async (tx) => {
       const customer = await tx.customer.findUnique({ where: { id: customerId } });
       if (!customer) throw Object.assign(new Error('Customer not found'), { statusCode: 404 });
-      await tx.reminderHistory.create({ data: { customerId, message: message || `Dear ${customer.name}, you have a pending due of Rs. ${Number(customer.dueAmount).toLocaleString('en-LK')} at Senari Chinese Hotel.`, status: 'sent' } });
+      await tx.reminderHistory.create({ data: { customerId, message: message || `Dear ${customer.name}, you have a pending due of Rs. ${Number(customer.dueAmount).toLocaleString('en-LK')} at Senari Restaurant.`, status: 'sent' } });
       await tx.customer.update({ where: { id: customerId }, data: { reminderCount: { increment: 1 } } });
       return { success: true, reminderCount: customer.reminderCount + 1 };
     });

@@ -20,9 +20,9 @@ export interface SystemSettings {
 }
 
 const DEFAULT_SETTINGS: Omit<SystemSettings, 'id' | 'updatedAt'> = {
-  hotelName: 'Senari Chinese Hotel',
+  hotelName: 'Senari Restaurant',
   reportTagline: 'Business Intelligence & Performance Report',
-  confidentialityNotice: 'SENARI CHINESE HOTEL — Confidential',
+  confidentialityNotice: 'Senari Restaurant — Confidential',
   currencySymbol: 'Rs.',
   compactTableView: false,
   darkMode: true,

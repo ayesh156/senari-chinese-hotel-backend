@@ -189,7 +189,7 @@ app.use('/api/uploads', express.static(path.join(__dirname, '../public/uploads')
 app.get('/api/health', (_req, res) => {
   res.status(200).json({
     status: 'ok',
-    message: 'Senari Chinese Hotel API is running',
+    message: 'Senari Restaurant API is running',
     timestamp: new Date().toISOString(),
   });
 });
@@ -211,7 +211,7 @@ function renderStatusPage(): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Senari Chinese Hotel API - Status</title>
+  <title>Senari Restaurant API - Status</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -410,7 +410,7 @@ function renderStatusPage(): string {
   <div class="container">
     <div class="status-card">
       <div class="icon-wrapper">🏮</div>
-      <h1>Senari Chinese Hotel API</h1>
+      <h1>Senari Restaurant API</h1>
       <p class="subtitle">Express REST API Server is Active</p>
       <div class="status-row">
         <span class="status-dot"></span>
@@ -458,7 +458,7 @@ const server = http.createServer(app);
 initSocket(server);
 
 server.listen(PORT, () => {
-  console.log(`🚀 Senari Chinese Hotel API running on http://localhost:${PORT}`);
+  console.log(`🚀 Senari Restaurant API running on http://localhost:${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`📡 API available at http://localhost:${PORT}/api`);
   console.log(`📡 Status page at http://localhost:${PORT}/api/test`);

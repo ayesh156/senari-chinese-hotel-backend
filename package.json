@@ -1,7 +1,7 @@
 {
   "name": "senari-chinese-hotel-backend",
   "version": "1.0.0",
-  "description": "Backend API for Senari Chinese Hotel",
+  "description": "Backend API for Senari Restaurant",
   "type": "module",
   "main": "dist/main.js",
   "scripts": {

@@ -459,7 +459,7 @@ async function main() {
   // ── Supplier Ledger History ─────────────────────────────────────────────
   await prisma.supplierPayment.create({ data: { supplierId: suppliers[0].id, amountPaid: 15000, notes: 'Partial payment for monthly grocery supply' } });
   await prisma.supplierPayment.create({ data: { supplierId: suppliers[2].id, amountPaid: 6000, notes: 'Payment for vegetables delivery' } });
-  await prisma.supplierReminder.create({ data: { supplierId: suppliers[0].id, message: 'Dear Perera Groceries, please process your outstanding invoices with Senari Chinese Hotel.', status: 'sent' } });
+  await prisma.supplierReminder.create({ data: { supplierId: suppliers[0].id, message: 'Dear Perera Groceries, please process your outstanding invoices with Senari Restaurant.', status: 'sent' } });
   await prisma.supplierReminder.create({ data: { supplierId: suppliers[4].id, message: 'Dear Ocean Fresh Seafood, kindly review your pending payments. Thank you!', status: 'sent' } });
   console.log('   ✅ Created supplier payments & reminders (ledger history)');
 

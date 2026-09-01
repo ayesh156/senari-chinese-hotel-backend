@@ -99,7 +99,7 @@ export class SupplierService {
     return prisma.$transaction(async (tx) => {
       const supplier = await tx.supplier.findUnique({ where: { id: supplierId } });
       if (!supplier) throw Object.assign(new Error('Supplier not found'), { statusCode: 404 });
-      await tx.supplierReminder.create({ data: { supplierId, message: message || `Dear ${supplier.name}, please review your outstanding payments with Senari Chinese Hotel.`, status: 'sent' } });
+      await tx.supplierReminder.create({ data: { supplierId, message: message || `Dear ${supplier.name}, please review your outstanding payments with Senari Restaurant.`, status: 'sent' } });
       return { success: true };
     });
   }
