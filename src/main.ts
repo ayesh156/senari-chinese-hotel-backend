@@ -9,8 +9,8 @@ import fs from 'fs';
 import http from 'http';
 import { fileURLToPath } from 'url';
 import routes from './routes';
-import { initSocket } from './lib/socket';
 import { errorHandler } from './middlewares/errorHandler.middleware';
+import { syncRouter } from './gateways/checkoutSync.gateway.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -180,7 +180,16 @@ app.use((_req, res, next) => {
 // ===================================
 // 10. STATIC FILE SERVING (UPLOADS)
 // ===================================
-app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+// Enable Cross-Origin Resource Sharing for static upload directory
+app.use(
+  '/uploads',
+  (req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    next();
+  },
+  express.static(path.join(__dirname, '../public/uploads'))
+);
 app.use('/api/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 // ===================================
@@ -444,6 +453,7 @@ app.get('/api/test', (_req, res) => {
 // ===================================
 // 13. API ROUTES
 // ===================================
+app.use('/api/sync', syncRouter);
 app.use('/api', routes);
 
 // ===================================
@@ -455,7 +465,6 @@ app.use(errorHandler);
 // 15. HTTP SERVER + SOCKET.IO STARTUP
 // ===================================
 const server = http.createServer(app);
-initSocket(server);
 
 server.listen(PORT, () => {
   console.log(`🚀 Senari Restaurant API running on http://localhost:${PORT}`);

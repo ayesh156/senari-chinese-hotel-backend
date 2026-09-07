@@ -1,6 +1,6 @@
 import prisma from '../lib/prisma';
-import { getIO } from '../lib/socket';
 import { Prisma } from '@prisma/client';
+import { broadcastToRoom } from '../gateways/checkoutSync.gateway.js';
 
 interface InvoiceFilter {
   search?: string;
@@ -200,8 +200,12 @@ export class InvoiceService {
       return created;
     });
 
-    // Broadcast to connected clients
-    try { getIO().emit('invoiceCreated', invoice); } catch {}
+    // 🌟 Broadcast new manual invoice to connected clients via SSE
+    try {
+      broadcastToRoom('default-tenant:SHOP', 'invoice_finalized', invoice);
+    } catch (err) {
+      console.warn('[SSE Broadcast Error]:', err);
+    }
 
     console.log(`[InvoiceService] Created invoice #${invoice.id} (${invoice.invoiceNumber})`);
     return invoice;

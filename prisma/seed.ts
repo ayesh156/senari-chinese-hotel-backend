@@ -31,16 +31,51 @@ async function main() {
 
   console.log('   ✅ Cleared existing data');
 
-  // ── Admin User ───────────────────────────────────────────────────────────
-  const hashedPassword = await bcrypt.hash('password123', 10);
-  const admin = await prisma.user.create({
-    data: { name: 'Admin', email: 'admin@senari.com', password: hashedPassword, role: 'ADMIN', active: true },
-  });
-  console.log(`   ✅ Created admin user: ${admin.email}`);
+  // ── Admin & Cashier Users ────────────────────────────────────────────────
+  const adminHashedPassword = await bcrypt.hash('password123', 10);
+  const cashierHashedPassword = await bcrypt.hash('cashierd123', 10);
 
-  // ── Food Categories ──────────────────────────────────────────────────────
-  const foodCategoryNames = ['Street Food', 'Rice Dishes', 'Noodles', 'Mains', 'Desserts', 'Beverages'];
-  const foodCategories = await Promise.all(foodCategoryNames.map((name) => prisma.category.create({ data: { name, type: 'FOOD' } })));
+  const [admin, cashier] = await Promise.all([
+    // 1. System Administrator
+    prisma.user.create({
+      data: {
+        name: 'Admin',
+        email: 'admin@senari.com',
+        password: adminHashedPassword,
+        role: 'ADMIN',
+        active: true,
+      },
+    }),
+    // 2. Cashier User
+    prisma.user.create({
+      data: {
+        name: 'Cashier',
+        email: 'cashier@senari.com',
+        password: cashierHashedPassword,
+        role: 'CASHIER',
+        active: true,
+      },
+    }),
+  ]);
+
+  console.log(`   ✅ Created admin user: ${admin.email}`);
+  console.log(`   ✅ Created cashier user: ${cashier.email}`);
+
+  // ── Food Categories (Synchronized with PDF Menu) ─────────────────────────
+  const foodCategoryNames = [
+    'Beverages',
+    'Quick Bites',
+    'Soups',
+    'Fried Rice',
+    'Noodles',
+    'Pasta & Macaroni',
+    'Kottu',
+    'Mains',
+  ];
+  const foodCategories = await Promise.all(
+    foodCategoryNames.map((name) => prisma.category.create({ data: { name, type: 'FOOD' } }))
+  );
+  const foodCatMap = Object.fromEntries(foodCategories.map((c) => [c.name, c.id]));
   console.log(`   ✅ Created ${foodCategories.length} food categories`);
 
   const inventoryCategoryNames = ['Meat', 'Seafood', 'Vegetables', 'Groceries', 'Dairy', 'Spices', 'Oils', 'Packaging'];
@@ -65,421 +100,336 @@ async function main() {
 
   // ── Food Items ────────────────────────────────────────────────────────────
   // High-resolution Unsplash food image seeds with realistic nutritional data
+ // ── Food Items (Extracted strictly from Senari Restaurant PDF Menu) ───────
   const foodItemsData = [
-    // Street Food
+    // ── 1. Beverages: Teas & Coffees ────────────────────────────────────────
     {
-      name: 'Chicken Kottu', price: 890, description: 'Stir-fried flatbread with chicken, vegetables, and aromatic spices',
-      categoryId: foodCategories[0].id, isNew: false, isFeatured: true, sortOrder: 1,
-      prepTimeMinutes: 15, calories: 620, isHealthy: false,
-      serves: '1-2 persons', ingredients: ['Flatbread (Roti)', 'Chicken', 'Cabbage', 'Carrots', 'Egg', 'Spices'],
-      image: 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=800&auto=format&fit=crop&q=80',
+      name: 'Ice Tea',
+      category: 'Beverages',
+      description: 'Chilled iced tea freshly brewed',
+      ingredients: ['Tea', 'Ice', 'Sugar'],
     },
     {
-      name: 'Egg Kottu', price: 690, description: 'Classic kottu roti with egg and vegetables',
-      categoryId: foodCategories[0].id, sortOrder: 2, isNew: false, isFeatured: false,
-      prepTimeMinutes: 12, calories: 530, isHealthy: false,
-      serves: '1 person', ingredients: ['Flatbread (Roti)', 'Egg', 'Cabbage', 'Carrots', 'Onions', 'Spices'],
-      image: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=800&auto=format&fit=crop&q=80',
+      name: 'Tea Pot (Two Person)',
+      category: 'Beverages',
+      description: 'Hot brewed tea pot served for two persons',
+      ingredients: ['Tea leaves', 'Hot water', 'Milk', 'Sugar'],
+      serves: '2 persons',
     },
     {
-      name: 'Cheese Kottu', price: 950, description: 'Indulgent kottu loaded with melted cheese, chicken and smoky devilled sauce',
-      categoryId: foodCategories[0].id, isNew: true, isFeatured: false, sortOrder: 3,
-      prepTimeMinutes: 15, calories: 680, isHealthy: false,
-      serves: '1-2 persons', ingredients: ['Flatbread (Roti)', 'Chicken', 'Mozzarella Cheese', 'Bell Peppers', 'Devilled Sauce'],
-      image: 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=800&auto=format&fit=crop&q=80',
+      name: 'Nescafe',
+      category: 'Beverages',
+      description: 'Classic hot Nescafe coffee',
+      ingredients: ['Nescafe coffee', 'Hot water', 'Milk', 'Sugar'],
     },
     {
-      name: 'Vegetable Kottu', price: 650, description: 'Shredded roti stir-fried with seasonal vegetables, egg and curry sauce',
-      categoryId: foodCategories[0].id, isNew: false, isFeatured: false, sortOrder: 4,
-      prepTimeMinutes: 12, calories: 480, isHealthy: true,
-      serves: '1 person', ingredients: ['Flatbread (Roti)', 'Cabbage', 'Carrots', 'Egg', 'Leeks', 'Curry Spices'],
-      image: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=800&auto=format&fit=crop&q=80',
-    },
-    // Rice Dishes
-    {
-      name: 'Chicken Fried Rice', price: 850, description: 'Wok-fried rice with tender chicken pieces, egg, and vegetables',
-      categoryId: foodCategories[1].id, sortOrder: 5, isNew: false, isFeatured: true,
-      prepTimeMinutes: 14, calories: 580, isHealthy: false,
-      serves: '1-2 persons', ingredients: ['Steamed Rice', 'Chicken', 'Egg', 'Carrots', 'Green Beans', 'Soy Sauce'],
-      image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=800&auto=format&fit=crop&q=80',
+      name: 'Nestea',
+      category: 'Beverages',
+      description: 'Flavour that warms the soul',
+      ingredients: ['Nestea blend', 'Water'],
     },
     {
-      name: 'Nasi Goreng', price: 950, description: 'Indonesian-style fried rice with fried egg, crackers, and sambal',
-      categoryId: foodCategories[1].id, isNew: true, isFeatured: false, sortOrder: 6,
-      prepTimeMinutes: 16, calories: 620, isHealthy: false,
-      serves: '1-2 persons', ingredients: ['Steamed Rice', 'Fried Egg', 'Shrimp Crackers', 'Sambal', 'Chicken Satay', 'Cucumber'],
-      image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=800&auto=format&fit=crop&q=80',
+      name: 'Ice Coffee',
+      category: 'Beverages',
+      description: 'Chilled creamy iced coffee',
+      ingredients: ['Coffee', 'Milk', 'Sugar', 'Ice'],
     },
     {
-      name: 'Prawn Fried Rice', price: 1050, description: 'Fragrant rice stir-fried with juicy prawns, egg and vegetables',
-      categoryId: foodCategories[1].id, isNew: true, isFeatured: false, sortOrder: 7,
-      prepTimeMinutes: 16, calories: 560, isHealthy: false,
-      serves: '1-2 persons', ingredients: ['Steamed Rice', 'Prawns', 'Egg', 'Garlic', 'Spring Onion', 'Soy Sauce'],
-      image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=800&auto=format&fit=crop&q=80',
+      name: 'Coffee Pot (Two Person)',
+      category: 'Beverages',
+      description: 'Freshly prepared hot coffee pot for two',
+      ingredients: ['Coffee', 'Hot water', 'Milk', 'Sugar'],
+      serves: '2 persons',
     },
-    {
-      name: 'Chicken Curry & Rice', price: 1100, description: 'Fragrant Sri Lankan chicken curry served with steamed rice',
-      categoryId: foodCategories[1].id, sortOrder: 8, isNew: false, isFeatured: true,
-      prepTimeMinutes: 20, calories: 650, isHealthy: false,
-      serves: '1 person', ingredients: ['Chicken Thighs', 'Steamed Rice', 'Coconut Milk', 'Curry Leaves', 'Cinnamon', 'Chilli Powder'],
-      image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=800&auto=format&fit=crop&q=80',
-    },
-    // Noodles
-    {
-      name: 'Chicken Noodles', price: 820, description: 'Egg noodles wok-tossed with chicken and seasonal vegetables',
-      categoryId: foodCategories[2].id, sortOrder: 9, isNew: false, isFeatured: true,
-      prepTimeMinutes: 14, calories: 530, isHealthy: false,
-      serves: '1-2 persons', ingredients: ['Egg Noodles', 'Chicken', 'Cabbage', 'Carrots', 'Soy Sauce', 'Garlic'],
-      image: 'https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=800&auto=format&fit=crop&q=80',
-    },
-    {
-      name: 'Seafood Noodles', price: 1100, description: 'Silky egg noodles with fresh prawns, squid and fish in garlic-ginger sauce',
-      categoryId: foodCategories[2].id, isNew: true, isFeatured: false, sortOrder: 10,
-      prepTimeMinutes: 18, calories: 480, isHealthy: true,
-      serves: '1-2 persons', ingredients: ['Egg Noodles', 'Prawns', 'Squid', 'Fish', 'Ginger', 'Garlic Sauce'],
-      image: 'https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=800&auto=format&fit=crop&q=80',
-    },
-    {
-      name: 'Egg Fried Noodles', price: 720, description: 'Classic egg noodles wok-fried with scrambled egg and spring onion',
-      categoryId: foodCategories[2].id, isNew: false, isFeatured: false, sortOrder: 11,
-      prepTimeMinutes: 10, calories: 510, isHealthy: false,
-      serves: '1 person', ingredients: ['Egg Noodles', 'Egg', 'Spring Onion', 'Soy Sauce', 'Sesame Oil'],
-      image: 'https://images.unsplash.com/photo-1555126634-323283e090fa?w=800&auto=format&fit=crop&q=80',
-    },
-    // Mains
-    {
-      name: 'Devilled Chicken', price: 1200, description: 'Crispy fried chicken tossed in spicy devilled sauce',
-      categoryId: foodCategories[3].id, sortOrder: 12, isNew: false, isFeatured: true,
-      prepTimeMinutes: 20, calories: 590, isHealthy: false,
-      serves: '1-2 persons', ingredients: ['Chicken', 'Bell Peppers', 'Onions', 'Chilli Sauce', 'Tomato Ketchup', 'Soy Sauce'],
-      image: 'https://images.unsplash.com/photo-1527477396000-e27163b481c2?w=800&auto=format&fit=crop&q=80',
-    },
-    {
-      name: 'Sweet & Sour Fish', price: 1350, description: 'Deep-fried fish fillets in tangy sweet and sour sauce',
-      categoryId: foodCategories[3].id, isNew: true, isFeatured: false, sortOrder: 13,
-      prepTimeMinutes: 22, calories: 520, isHealthy: false,
-      serves: '1-2 persons', ingredients: ['Fish Fillets', 'Pineapple', 'Capsicum', 'Tomato Sauce', 'Vinegar', 'Sugar'],
-      image: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800&auto=format&fit=crop&q=80',
-    },
-    {
-      name: 'Prawn Curry', price: 1350, description: 'Plump tiger prawns slow-cooked in rich coconut milk curry',
-      categoryId: foodCategories[3].id, isNew: false, isFeatured: false, sortOrder: 14,
-      prepTimeMinutes: 22, calories: 420, isHealthy: true,
-      serves: '1-2 persons', ingredients: ['Tiger Prawns', 'Coconut Milk', 'Curry Leaves', 'Turmeric', 'Chilli', 'Mustard Seeds'],
-      image: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800&auto=format&fit=crop&q=80',
-    },
-    {
-      name: 'Fish Ambul Thiyal', price: 1150, description: 'Bold, tangy dry fish curry with goraka and roasted spices',
-      categoryId: foodCategories[3].id, isNew: false, isFeatured: false, sortOrder: 15,
-      prepTimeMinutes: 25, calories: 380, isHealthy: true,
-      serves: '1-2 persons', ingredients: ['Tuna', 'Goraka', 'Roasted Curry Powder', 'Garlic', 'Pandan Leaves'],
-      image: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800&auto=format&fit=crop&q=80',
-    },
-    {
-      name: 'Dhal Curry', price: 480, description: 'Creamy red lentil curry tempered with mustard seeds and coconut milk',
-      categoryId: foodCategories[3].id, isNew: false, isFeatured: false, sortOrder: 16,
-      prepTimeMinutes: 15, calories: 340, isHealthy: true,
-      serves: '1 person', ingredients: ['Red Lentils', 'Coconut Milk', 'Mustard Seeds', 'Curry Leaves', 'Turmeric', 'Onion'],
-      image: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800&auto=format&fit=crop&q=80',
-    },
-    // Desserts
-    {
-      name: 'Watalappan', price: 350, description: 'Traditional Sri Lankan steamed coconut custard with jaggery',
-      categoryId: foodCategories[4].id, sortOrder: 17, isNew: false, isFeatured: true,
-      prepTimeMinutes: 5, calories: 310, isHealthy: false,
-      serves: '1 person', ingredients: ['Coconut Milk', 'Jaggery', 'Eggs', 'Cardamom', 'Cashew Nuts'],
-      image: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=800&auto=format&fit=crop&q=80',
-    },
-    {
-      name: 'Ice Cream Trio', price: 450, description: 'Three scoops of vanilla, chocolate, and strawberry ice cream',
-      categoryId: foodCategories[4].id, sortOrder: 18, isNew: false, isFeatured: false,
-      prepTimeMinutes: 3, calories: 350, isHealthy: false,
-      serves: '1 person', ingredients: ['Vanilla Ice Cream', 'Chocolate Ice Cream', 'Strawberry Ice Cream', 'Wafer'],
-      image: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=800&auto=format&fit=crop&q=80',
-    },
-    {
-      name: 'Curd & Treacle', price: 320, description: 'Thick buffalo curd served with golden kithul treacle',
-      categoryId: foodCategories[4].id, isNew: false, isFeatured: false, sortOrder: 19,
-      prepTimeMinutes: 3, calories: 260, isHealthy: true,
-      serves: '1 person', ingredients: ['Buffalo Curd', 'Kithul Treacle'],
-      image: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=800&auto=format&fit=crop&q=80',
-    },
-    {
-      name: 'Coconut Ice Cream', price: 420, description: 'House-made coconut ice cream with pandan and toasted coconut',
-      categoryId: foodCategories[4].id, isNew: true, isFeatured: false, sortOrder: 20,
-      prepTimeMinutes: 3, calories: 290, isHealthy: false,
-      serves: '1 person', ingredients: ['Coconut Cream', 'Sugar', 'Pandan Leaves', 'Toasted Coconut Flakes'],
-      image: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=800&auto=format&fit=crop&q=80',
-    },
-    // Beverages
-    {
-      name: 'Fresh Lime Juice', price: 250, description: 'Freshly squeezed lime juice with a hint of salt and sugar',
-      categoryId: foodCategories[5].id, sortOrder: 21, isNew: false, isFeatured: false,
-      prepTimeMinutes: 5, calories: 90, isHealthy: true,
-      serves: '1 person', ingredients: ['Fresh Lime', 'Sugar', 'Salt', 'Mint Leaves', 'Ice'],
-      image: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=800&auto=format&fit=crop&q=80',
-    },
-    {
-      name: 'Mango Lassi', price: 350, description: 'Creamy yoghurt drink blended with ripe Alphonso mangoes',
-      categoryId: foodCategories[5].id, isNew: true, isFeatured: false, sortOrder: 22,
-      prepTimeMinutes: 5, calories: 210, isHealthy: false,
-      serves: '1 person', ingredients: ['Mango', 'Yoghurt', 'Milk', 'Sugar', 'Cardamom'],
-      image: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=800&auto=format&fit=crop&q=80',
-    },
-    {
-      name: 'King Coconut', price: 180, description: 'Fresh Sri Lankan king coconut water — naturally sweet and hydrating',
-      categoryId: foodCategories[5].id, isNew: false, isFeatured: false, sortOrder: 23,
-      prepTimeMinutes: 2, calories: 45, isHealthy: true,
-      serves: '1 person', ingredients: ['King Coconut Water', 'Coconut'],
-      image: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=800&auto=format&fit=crop&q=80',
-    },
-    {
-      name: 'Ceylon Tea', price: 150, description: 'Freshly brewed high-grown Ceylon tea with milk and sugar',
-      categoryId: foodCategories[5].id, isNew: false, isFeatured: false, sortOrder: 24,
-      prepTimeMinutes: 5, calories: 10, isHealthy: true,
-      serves: '1 person', ingredients: ['Ceylon Tea Leaves', 'Milk', 'Sugar'],
-      image: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=800&auto=format&fit=crop&q=80',
-    },
-  ];
-  const foodItems = await Promise.all(foodItemsData.map((item) =>
-    prisma.foodItem.create({
-      data: {
-        name: item.name,
-        price: item.price,
-        description: item.description,
-        categoryId: item.categoryId,
-        image: item.image,
-        prepTimeMinutes: item.prepTimeMinutes,
-        calories: item.calories,
-        serves: item.serves ?? "1-2 persons",
-        ingredients: item.ingredients ?? [],
-        isHealthy: item.isHealthy,
-        isNew: item.isNew ?? false,
-        isFeatured: item.isFeatured ?? false,
-        isAvailable: true,
-        sortOrder: item.sortOrder,
-      },
-    })
-  ));
-  console.log(`   ✅ Created ${foodItems.length} food items`);
 
-  // ── Inventory Items ──────────────────────────────────────────────────────
-  const catMap = Object.fromEntries(inventoryCategories.map(c => [c.name, c.id]));
-  const unitMap = Object.fromEntries(units.map(u => [u.name, u.id]));
-  const inventoryItemsData = [
-    { name: 'Basmati Rice', sku: 'ITM00001', categoryName: 'Groceries', quantity: 45, unitName: 'Kilogram', minAlertLevel: 20, unitPrice: 350 },
-    { name: 'Chicken Breast', sku: 'ITM00002', categoryName: 'Meat', quantity: 8, unitName: 'Kilogram', minAlertLevel: 15, unitPrice: 1200 },
-    { name: 'Yellow Onions', sku: 'ITM00003', categoryName: 'Vegetables', quantity: 0, unitName: 'Kilogram', minAlertLevel: 10, unitPrice: 180 },
-    { name: 'Cooking Oil', sku: 'ITM00004', categoryName: 'Oils', quantity: 12, unitName: 'Liter', minAlertLevel: 5, unitPrice: 650 },
-    { name: 'Mixed Spice Blend', sku: 'ITM00005', categoryName: 'Spices', quantity: 3, unitName: 'Packet', minAlertLevel: 10, unitPrice: 450 },
-    { name: 'Fresh Ginger', sku: 'ITM00006', categoryName: 'Vegetables', quantity: 5, unitName: 'Kilogram', minAlertLevel: 8, unitPrice: 400 },
-    { name: 'Eggs', sku: 'ITM00007', categoryName: 'Dairy', quantity: 0, unitName: 'Tray', minAlertLevel: 20, unitPrice: 850 },
-    { name: 'Soy Sauce', sku: 'ITM00008', categoryName: 'Groceries', quantity: 24, unitName: 'Bottle', minAlertLevel: 10, unitPrice: 320 },
-    { name: 'Prawns', sku: 'ITM00009', categoryName: 'Seafood', quantity: 6, unitName: 'Kilogram', minAlertLevel: 10, unitPrice: 2800 },
-    { name: 'Spring Onions', sku: 'ITM00010', categoryName: 'Vegetables', quantity: 15, unitName: 'Bunch', minAlertLevel: 5, unitPrice: 120 },
-    { name: 'Garlic', sku: 'ITM00011', categoryName: 'Vegetables', quantity: 4, unitName: 'Kilogram', minAlertLevel: 8, unitPrice: 500 },
-    { name: 'Coconut Milk', sku: 'ITM00012', categoryName: 'Groceries', quantity: 0, unitName: 'Can', minAlertLevel: 12, unitPrice: 280 },
-    { name: 'Red Chili Powder', sku: 'ITM00013', categoryName: 'Spices', quantity: 18, unitName: 'Kilogram', minAlertLevel: 5, unitPrice: 900 },
-    { name: 'Beef Mince', sku: 'ITM00014', categoryName: 'Meat', quantity: 2, unitName: 'Kilogram', minAlertLevel: 8, unitPrice: 1500 },
-    { name: 'Carrots', sku: 'ITM00015', categoryName: 'Vegetables', quantity: 22, unitName: 'Kilogram', minAlertLevel: 10, unitPrice: 220 },
-    { name: 'Firm Tofu', sku: 'ITM00016', categoryName: 'Groceries', quantity: 0, unitName: 'Block', minAlertLevel: 6, unitPrice: 350 },
-    { name: 'Fish Sauce', sku: 'ITM00017', categoryName: 'Groceries', quantity: 9, unitName: 'Liter', minAlertLevel: 4, unitPrice: 480 },
-    { name: 'Bell Peppers', sku: 'ITM00018', categoryName: 'Vegetables', quantity: 7, unitName: 'Kilogram', minAlertLevel: 10, unitPrice: 650 },
-    { name: 'Chicken Thighs', sku: 'ITM00019', categoryName: 'Meat', quantity: 0, unitName: 'Kilogram', minAlertLevel: 12, unitPrice: 1100 },
-    { name: 'Pork Belly', sku: 'ITM00020', categoryName: 'Meat', quantity: 5, unitName: 'Kilogram', minAlertLevel: 6, unitPrice: 1800 },
-    { name: 'Turmeric Powder', sku: 'ITM00021', categoryName: 'Spices', quantity: 14, unitName: 'Gram', minAlertLevel: 5, unitPrice: 150 },
-    { name: 'Cinnamon Sticks', sku: 'ITM00022', categoryName: 'Spices', quantity: 6, unitName: 'Packet', minAlertLevel: 4, unitPrice: 280 },
-    { name: 'Green Chilies', sku: 'ITM00023', categoryName: 'Vegetables', quantity: 12, unitName: 'Piece', minAlertLevel: 8, unitPrice: 50 },
-    { name: 'Cardamom Pods', sku: 'ITM00024', categoryName: 'Spices', quantity: 4, unitName: 'Gram', minAlertLevel: 3, unitPrice: 3500 },
-  ];
-  const inventoryItems = await Promise.all(inventoryItemsData.map((item) => prisma.inventoryItem.create({ data: { sku: item.sku, name: item.name, categoryId: catMap[item.categoryName], unitId: unitMap[item.unitName], quantity: item.quantity, minAlertLevel: item.minAlertLevel, unitPrice: item.unitPrice } })));
-  console.log(`   ✅ Created ${inventoryItems.length} inventory items`);
+    // ── 1. Beverages: Cool Drinks & Water ───────────────────────────────────
+    { name: 'Coca Cola 400ml', category: 'Beverages', description: 'Chilled Coca Cola 400ml bottle', ingredients: ['Coca Cola'] },
+    { name: 'Zero Coca Cola 400ml', category: 'Beverages', description: 'Zero sugar Coca Cola 400ml', ingredients: ['Zero Coca Cola'] },
+    { name: 'Coca Cola 300ml', category: 'Beverages', description: 'Chilled Coca Cola 300ml glass bottle', ingredients: ['Coca Cola'] },
+    { name: 'Sprite 400ml', category: 'Beverages', description: 'Refreshing lemon-lime Sprite 400ml', ingredients: ['Sprite'] },
+    { name: 'Sprite 300ml', category: 'Beverages', description: 'Chilled Sprite 300ml glass bottle', ingredients: ['Sprite'] },
+    { name: 'Lemonade 400ml', category: 'Beverages', description: 'Fizzy sweet and sour Lemonade 400ml', ingredients: ['Lemonade'] },
+    { name: 'Soda 500ml', category: 'Beverages', description: 'Carbonated soda water 500ml', ingredients: ['Soda'] },
+    { name: 'Soda 400ml', category: 'Beverages', description: 'Carbonated soda water 400ml', ingredients: ['Soda'] },
+    { name: 'Tonic 500ml', category: 'Beverages', description: 'Classic tonic water 500ml', ingredients: ['Tonic water'] },
+    { name: 'Tonic 400ml', category: 'Beverages', description: 'Classic tonic water 400ml', ingredients: ['Tonic water'] },
+    { name: 'Dry Ginger Ale 400ml', category: 'Beverages', description: 'Crisp dry ginger ale 400ml', ingredients: ['Ginger ale'] },
+    { name: 'Ginger Beer 400ml', category: 'Beverages', description: 'Spicy Sri Lankan ginger beer 400ml', ingredients: ['Ginger beer'] },
+    { name: 'Water 1L', category: 'Beverages', description: 'Purified drinking water 1 Litre bottle', ingredients: ['Mineral water'] },
+    { name: 'Water 500ml', category: 'Beverages', description: 'Purified drinking water 500ml bottle', ingredients: ['Mineral water'] },
 
-  // ── Inventory Adjustments ──────────────────────────────────────────────
-  const adjItemMap = Object.fromEntries(inventoryItems.map(i => [i.name, i.id]));
-  const adjustmentsData = [
-    { itemName: 'Chicken Breast', type: 'New Delivery', qty: 15, prevQty: 0, notes: 'Weekly poultry order' },
-    { itemName: 'Chicken Breast', type: 'Daily Usage', qty: -7, prevQty: 15, notes: 'Used for lunch service' },
-    { itemName: 'Chicken Breast', type: 'New Delivery', qty: 15, prevQty: 8, notes: 'Top-up order' },
-    { itemName: 'Basmati Rice', type: 'New Delivery', qty: 50, prevQty: 0, notes: 'Bulk rice order' },
-    { itemName: 'Basmati Rice', type: 'Daily Usage', qty: -5, prevQty: 50, notes: 'Requisition' },
-    { itemName: 'Yellow Onions', type: 'New Delivery', qty: 20, prevQty: 0, notes: 'Initial stock' },
-    { itemName: 'Yellow Onions', type: 'Daily Usage', qty: -20, prevQty: 20, notes: 'Consumed' },
-    { itemName: 'Cooking Oil', type: 'New Delivery', qty: 20, prevQty: 0, notes: 'Bulk purchase' },
-    { itemName: 'Cooking Oil', type: 'Daily Usage', qty: -8, prevQty: 20, notes: 'Deep frying' },
-    { itemName: 'Prawns', type: 'New Delivery', qty: 10, prevQty: 0, notes: 'Seafood delivery' },
-    { itemName: 'Prawns', type: 'Daily Usage', qty: -4, prevQty: 10, notes: 'Used' },
-    { itemName: 'Eggs', type: 'New Delivery', qty: 30, prevQty: 0, notes: 'Dairy delivery' },
-    { itemName: 'Eggs', type: 'Daily Usage', qty: -30, prevQty: 30, notes: 'Morning prep' },
-    { itemName: 'Green Chilies', type: 'New Delivery', qty: 8, prevQty: 0, notes: 'Weekly vegetable order' },
-  ];
-  for (const adj of adjustmentsData) { await prisma.inventoryAdjustment.create({ data: { inventoryItemId: adjItemMap[adj.itemName], adjustmentType: adj.type, quantity: adj.qty, previousStock: adj.prevQty, newStock: adj.prevQty + adj.qty, notes: adj.notes } }); }
-  console.log(`   ✅ Created ${adjustmentsData.length} inventory adjustments`);
+    // ── 2. Quick Bites (First Bite) ─────────────────────────────────────────
+    {
+      name: 'Jumbo Sausage - Fried',
+      category: 'Quick Bites',
+      description: 'Fried jumbo sausage tossed with onions and green chilies',
+      ingredients: ['Jumbo Sausage', 'Green Chili', 'Curry Leaves', 'Fresh Onion'],
+    },
+    {
+      name: 'Fried Cashew Nuts / Almond and Garlic',
+      category: 'Quick Bites',
+      description: 'Crispy fried cashew nuts, almonds and golden garlic cloves',
+      ingredients: ['Cashew Nuts', 'Almond', 'Garlic', 'Curry Leaves', 'Chili Powder', 'Salt'],
+    },
+    {
+      name: 'Fried Garlic',
+      category: 'Quick Bites',
+      description: 'Whole crispy fried garlic tempered with spices',
+      ingredients: ['Garlic', 'Curry Leaves', 'Chili Powder', 'Salt'],
+    },
+    {
+      name: 'French Fries',
+      category: 'Quick Bites',
+      description: 'Crispy fried potato fries spiced with chili and curry leaves',
+      ingredients: ['Potatoes', 'Curry Leaves', 'Chili Powder', 'Salt'],
+    },
+    {
+      name: 'Kochchi Bite',
+      category: 'Quick Bites',
+      description: 'Spicy bite tossed with fiery bird’s eye chilies and creamy mayonnaise',
+      ingredients: ['Fresh Onion', 'Green Chili (Kochchi)', 'Mayonnaise'],
+    },
+    {
+      name: 'Fruit Platter',
+      category: 'Quick Bites',
+      description: 'Assorted seasonal fresh tropical fruit slices',
+      ingredients: ['Assorted Tropical Fruits'],
+    },
+    {
+      name: 'Papaya Platter',
+      category: 'Quick Bites',
+      description: 'Freshly carved sweet ripe papaya platter',
+      ingredients: ['Ripe Papaya'],
+    },
 
-  // ── Customers ──────────────────────────────────────────────────────────
-  const customerData = [
-    { name: 'Kamal Perera', phone: '0771234567', email: 'kamal@example.com', address: '12 Galle Rd, Matara' },
-    { name: 'Nimal Silva', phone: '0719876543', email: 'nimal@example.com', address: '45 Main St, Colombo 03' },
-    { name: 'Sanduni Fernando', phone: '0765551234', email: 'sanduni@example.com', address: '8 Temple Rd, Kandy' },
-    { name: 'Ruwan Jayawardena', phone: '0704449876', email: '', address: '22 Lake View, Kurunegala' },
-    { name: 'Priya Wickramasinghe', phone: '0782223344', email: 'priya@example.com', address: '5 Beach Rd, Galle' },
-    { name: 'Chamara Bandara', phone: '0756667788', email: 'chamara@example.com', address: '33 Hill St, Nuwara Eliya' },
-    { name: 'Dilani Rathnayake', phone: '0778882211', email: '', address: '17 Park Ave, Negombo' },
-    { name: 'Asanka Gunawardena', phone: '0713335566', email: 'asanka@example.com', address: '9 Fort Rd, Trincomalee' },
-    { name: 'Tharushi Perera', phone: '0761112233', email: 'tharushi@example.com', address: '3 Lotus Rd, Batticaloa' },
-    { name: 'Malith Bandara', phone: '0773345566', email: '', address: '28 River Rd, Ratnapura' },
-    { name: 'Sachini Rajapaksa', phone: '0715567788', email: 'sachini@example.com', address: '14 Garden Rd, Anuradhapura' },
-    { name: 'Dinesh Kumara', phone: '0787789900', email: 'dinesh@example.com', address: '6 Station Rd, Badulla' },
-    { name: 'Amali Senanayake', phone: '0759901122', email: '', address: '19 Sea View, Hambantota' },
-    { name: 'Roshan Wijesinghe', phone: '0701123344', email: 'roshan@example.com', address: '41 Central Rd, Polonnaruwa' },
-    { name: 'Kavinda Dissanayake', phone: '0772234455', email: 'kavinda@example.com', address: '7 Lotus Lane, Ampara' },
-    { name: 'Ishara Madushani', phone: '0714456677', email: 'ishara@example.com', address: '55 Hill Top, Kegalle' },
-    { name: 'Nuwan Priyantha', phone: '0766678899', email: '', address: '11 Canal Rd, Kalutara' },
-    { name: 'Chamodi Rathnayake', phone: '0788890011', email: 'chamodi@example.com', address: '23 Flower Rd, Matale' },
-    { name: 'Lasith Malinga', phone: '0700012233', email: '', address: '2 Coconut Grove, Puttalam' },
-    { name: 'Hiruni Jayasekara', phone: '0752234455', email: 'hiruni@example.com', address: '36 Sunset Blvd, Chilaw' },
-  ];
-  const customers = await Promise.all(customerData.map((c) => prisma.customer.create({ data: c })));
-  console.log(`   ✅ Created ${customers.length} customers`);
+    // ── 3. Soups (Served with Bread and Butter) ─────────────────────────────
+    {
+      name: 'Cream of Chicken Soup',
+      category: 'Soups',
+      description: 'Rich creamy chicken soup served with bread and butter',
+      ingredients: ['Chicken', 'Cream', 'Butter', 'Bread'],
+    },
+    {
+      name: 'Chicken With Egg Drop Soup',
+      category: 'Soups',
+      description: 'Clear chicken broth with silky egg ribbons served with bread and butter',
+      ingredients: ['Chicken', 'Egg', 'Chicken Broth', 'Butter', 'Bread'],
+    },
+    {
+      name: 'Sweet Corn, Chicken With Egg Drop Soup',
+      category: 'Soups',
+      description: 'Sweet corn and shredded chicken soup with egg drop served with bread and butter',
+      ingredients: ['Sweet Corn', 'Chicken', 'Egg', 'Butter', 'Bread'],
+    },
+    {
+      name: 'Seafood and Mixed Vegetable With Egg Drop Soup',
+      category: 'Soups',
+      description: 'Hearty soup loaded with seafood, garden vegetables and egg ribbons',
+      ingredients: ['Prawns', 'Calamari', 'Mixed Vegetables', 'Egg', 'Butter', 'Bread'],
+    },
+    {
+      name: 'Seafood Tom Yum Soup',
+      category: 'Soups',
+      description: 'Authentic spicy and sour Thai seafood broth served with bread and butter',
+      ingredients: ['Seafood', 'Lemongrass', 'Lime juice', 'Chili paste', 'Butter', 'Bread'],
+    },
+    {
+      name: 'Mutton With Egg Drop Soup',
+      category: 'Soups',
+      description: 'Slow-simmered tender mutton soup with egg ribbons and warm spices',
+      ingredients: ['Mutton', 'Egg', 'Aromatic Broth', 'Butter', 'Bread'],
+    },
+    {
+      name: 'Vegetable Broth Soup',
+      category: 'Soups',
+      description: 'Light and nourishing clear seasonal vegetable broth served with bread and butter',
+      ingredients: ['Seasonal Vegetables', 'Herbs', 'Butter', 'Bread'],
+    },
 
-  // ── Helper: Random date in month ──────────────────────────────────
-  function getRandomDateInMonth(year: number, month: number): Date {
-    const date = new Date(year, month, Math.floor(Math.random() * 28) + 1);
-    date.setHours(Math.floor(Math.random() * 12) + 10, Math.floor(Math.random() * 60));
-    return date;
-  }
+    // ── 4. Fried Rice (Full & Half Portions) ─────────────────────────────────
+    { name: 'Plain Rice (Full)', category: 'Fried Rice', description: 'Steamed basmati plain rice full portion', ingredients: ['Steamed Basmati Rice'], serves: '2 persons' },
+    { name: 'Plain Rice (Half)', category: 'Fried Rice', description: 'Steamed basmati plain rice half portion', ingredients: ['Steamed Basmati Rice'], serves: '1 person' },
 
-  // ── Helper: Pick random items from array ──────────────────────────
-  function pickRandom(arr: any[], min = 1, max = 4) {
-    const count = min + Math.floor(Math.random() * Math.min(max - min + 1, arr.length));
-    const shuffled = [...arr].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, count);
-  }
+    { name: 'Vegetable Fried Rice [without Egg] (Full)', category: 'Fried Rice', description: 'Wok-tossed vegetable fried rice full portion without egg', ingredients: ['Basmati Rice', 'Carrots', 'Leeks', 'Cabbage', 'Soy sauce'], serves: '2 persons' },
+    { name: 'Vegetable Fried Rice [without Egg] (Half)', category: 'Fried Rice', description: 'Wok-tossed vegetable fried rice half portion without egg', ingredients: ['Basmati Rice', 'Carrots', 'Leeks', 'Cabbage', 'Soy sauce'], serves: '1 person' },
 
-  // ── Historical Orders (April, May, June 2026) ─────────────────────
-  const orderStatuses = ['COMPLETED', 'COMPLETED', 'COMPLETED', 'COMPLETED'] as const;
-  const paymentStatuses = ['PAID', 'PAID', 'PAID', 'PARTIAL'] as const;
-  const orderTypes = ['DINE_IN', 'TAKEAWAY', 'DELIVERY'] as const;
-  const customerNameCycle = ['Walk-in Customer', 'Kamal Perera', 'Nimal Silva', 'Sanduni Fernando', 'Ruwan Jayawardena', 'Priya Wickramasinghe'];
+    { name: 'Egg Fried Rice (Full)', category: 'Fried Rice', description: 'Classic wok-fried basmati rice with eggs and vegetables full portion', ingredients: ['Basmati Rice', 'Egg', 'Carrots', 'Leeks', 'Soy sauce'], serves: '2 persons' },
+    { name: 'Egg Fried Rice (Half)', category: 'Fried Rice', description: 'Classic wok-fried basmati rice with eggs and vegetables half portion', ingredients: ['Basmati Rice', 'Egg', 'Carrots', 'Leeks', 'Soy sauce'], serves: '1 person' },
 
-  let invoiceSeq = 582910;
-  let ordersApril = 0, ordersMay = 0, ordersJune = 0;
+    { name: 'Chicken Fried Rice (Full)', category: 'Fried Rice', description: 'Fragrant fried rice tossed with tender seasoned chicken full portion', ingredients: ['Basmati Rice', 'Chicken', 'Egg', 'Vegetables', 'Soy sauce'], serves: '2 persons' },
+    { name: 'Chicken Fried Rice (Half)', category: 'Fried Rice', description: 'Fragrant fried rice tossed with tender seasoned chicken half portion', ingredients: ['Basmati Rice', 'Chicken', 'Egg', 'Vegetables', 'Soy sauce'], serves: '1 person' },
 
-  const monthlyConfigs = [
-    [2026, 3, 20],
-    [2026, 4, 22],
-    [2026, 5, 25],
+    { name: 'Seafood Fried Rice (Full)', category: 'Fried Rice', description: 'Wok-fried rice with prawns, squid and fish full portion', ingredients: ['Basmati Rice', 'Prawns', 'Squid', 'Fish', 'Egg', 'Vegetables'], serves: '2 persons' },
+    { name: 'Seafood Fried Rice (Half)', category: 'Fried Rice', description: 'Wok-fried rice with prawns, squid and fish half portion', ingredients: ['Basmati Rice', 'Prawns', 'Squid', 'Fish', 'Egg', 'Vegetables'], serves: '1 person' },
+
+    { name: 'Mixed Fried Rice (Full)', category: 'Fried Rice', description: 'Wok-fried rice with chicken, seafood, egg and vegetables full portion', ingredients: ['Basmati Rice', 'Chicken', 'Seafood', 'Egg', 'Vegetables'], serves: '2 persons' },
+    { name: 'Mixed Fried Rice (Half)', category: 'Fried Rice', description: 'Wok-fried rice with chicken, seafood, egg and vegetables half portion', ingredients: ['Basmati Rice', 'Chicken', 'Seafood', 'Egg', 'Vegetables'], serves: '1 person' },
+
+    { name: 'Nasi Goreng (Full)', category: 'Fried Rice', description: 'Indonesian style spicy wok fried rice served with fried egg and crackers full portion', ingredients: ['Basmati Rice', 'Fried Egg', 'Chicken', 'Prawns', 'Chili paste'], serves: '2 persons' },
+    { name: 'Nasi Goreng (Half)', category: 'Fried Rice', description: 'Indonesian style spicy wok fried rice half portion', ingredients: ['Basmati Rice', 'Fried Egg', 'Chicken', 'Prawns', 'Chili paste'], serves: '1 person' },
+
+    { name: 'Mongolian Fried Rice (Full)', category: 'Fried Rice', description: 'Savory stir-fried Mongolian style rice with secret sauce full portion', ingredients: ['Basmati Rice', 'Chicken', 'Bell peppers', 'Mongolian sauce'], serves: '2 persons' },
+    { name: 'Mongolian Fried Rice (Half)', category: 'Fried Rice', description: 'Savory stir-fried Mongolian style rice half portion', ingredients: ['Basmati Rice', 'Chicken', 'Bell peppers', 'Mongolian sauce'], serves: '1 person' },
+
+    {
+      name: 'Senari Special Fried Rice (Dining Only)',
+      category: 'Fried Rice',
+      description: 'Signature rice served with chicken leg, jumbo sausage, fried egg and chilli paste (Dining only)',
+      ingredients: ['Basmati Rice', 'Chicken Leg', 'Jumbo Sausage', 'Fried Egg', 'Chilli Paste'],
+      serves: '1-2 persons',
+    },
+
+    // ── 5. Noodles (Full & Half Portions) ───────────────────────────────────
+    { name: 'Vegetable Noodles [without Egg] (Full)', category: 'Noodles', description: 'Wok-tossed noodles with fresh seasonal vegetables without egg full portion', ingredients: ['Noodles', 'Carrots', 'Cabbage', 'Leeks', 'Soy sauce'], serves: '2 persons' },
+    { name: 'Vegetable Noodles [without Egg] (Half)', category: 'Noodles', description: 'Wok-tossed noodles with fresh seasonal vegetables without egg half portion', ingredients: ['Noodles', 'Carrots', 'Cabbage', 'Leeks', 'Soy sauce'], serves: '1 person' },
+
+    { name: 'Egg Noodles (Full)', category: 'Noodles', description: 'Classic wok-fried egg noodles with scrambled egg and vegetables full portion', ingredients: ['Noodles', 'Egg', 'Carrots', 'Leeks', 'Spring Onion'], serves: '2 persons' },
+    { name: 'Egg Noodles (Half)', category: 'Noodles', description: 'Classic wok-fried egg noodles with scrambled egg and vegetables half portion', ingredients: ['Noodles', 'Egg', 'Carrots', 'Leeks', 'Spring Onion'], serves: '1 person' },
+
+    { name: 'Chicken Noodles (Full)', category: 'Noodles', description: 'Wok-fried egg noodles with seasoned chicken pieces full portion', ingredients: ['Noodles', 'Chicken', 'Egg', 'Vegetables', 'Soy sauce'], serves: '2 persons' },
+    { name: 'Chicken Noodles (Half)', category: 'Noodles', description: 'Wok-fried egg noodles with seasoned chicken pieces half portion', ingredients: ['Noodles', 'Chicken', 'Egg', 'Vegetables', 'Soy sauce'], serves: '1 person' },
+
+    { name: 'Seafood Noodles (Full)', category: 'Noodles', description: 'Wok-fried noodles with prawns, cuttlefish and fish full portion', ingredients: ['Noodles', 'Prawns', 'Cuttlefish', 'Fish', 'Egg', 'Vegetables'], serves: '2 persons' },
+    { name: 'Seafood Noodles (Half)', category: 'Noodles', description: 'Wok-fried noodles with prawns, cuttlefish and fish half portion', ingredients: ['Noodles', 'Prawns', 'Cuttlefish', 'Fish', 'Egg', 'Vegetables'], serves: '1 person' },
+
+    { name: 'Mixed Noodles (Full)', category: 'Noodles', description: 'Wok-fried noodles loaded with chicken, seafood and egg full portion', ingredients: ['Noodles', 'Chicken', 'Seafood', 'Egg', 'Vegetables'], serves: '2 persons' },
+    { name: 'Mixed Noodles (Half)', category: 'Noodles', description: 'Wok-fried noodles loaded with chicken, seafood and egg half portion', ingredients: ['Noodles', 'Chicken', 'Seafood', 'Egg', 'Vegetables'], serves: '1 person' },
+
+    {
+      name: 'Chop-suey with Noodles or Rice (Half Portion)',
+      category: 'Noodles',
+      description: 'Crispy vegetable and chicken chop-suey served with noodles or rice half portion',
+      ingredients: ['Noodles or Rice', 'Chicken', 'Baby Corn', 'Mushrooms', 'Chop-suey Gravy'],
+      serves: '1 person',
+    },
+
+    // ── 6. Pasta & Macaroni ─────────────────────────────────────────────────
+    { name: 'Penne Arrabbiata Chicken', category: 'Pasta & Macaroni', description: 'Penne pasta tossed in spicy garlic tomato sauce with chicken', ingredients: ['Penne Pasta', 'Chicken', 'Spicy Tomato Sauce', 'Garlic', 'Chili Flakes'] },
+    { name: 'Spaghetti Carbonara', category: 'Pasta & Macaroni', description: 'Classic spaghetti in velvety cream, egg yolk, cheese and bacon/ham sauce', ingredients: ['Spaghetti', 'Cream', 'Egg Yolk', 'Cheese', 'Black Pepper'] },
+    { name: 'Penne Alfredo with Prawns', category: 'Pasta & Macaroni', description: 'Creamy parmesan Alfredo sauce penne with succulent sautéed prawns', ingredients: ['Penne Pasta', 'Prawns', 'Alfredo Cream Sauce', 'Parmesan Cheese'] },
+
+    { name: 'Cheese Macaroni (Sri Lankan Style)', category: 'Pasta & Macaroni', description: 'Sri Lankan style spiced macaroni loaded with melted cheese', ingredients: ['Macaroni', 'Cheese', 'Curry Spices', 'Onions', 'Chili'] },
+    { name: 'Chicken Macaroni (Sri Lankan Style)', category: 'Pasta & Macaroni', description: 'Sri Lankan style spiced macaroni stir-fried with chicken', ingredients: ['Macaroni', 'Chicken', 'Curry Spices', 'Onions', 'Tomatoes'] },
+    { name: 'Seafood Macaroni (Sri Lankan Style)', category: 'Pasta & Macaroni', description: 'Spicy macaroni stir-fried with prawns and cuttlefish', ingredients: ['Macaroni', 'Prawns', 'Cuttlefish', 'Curry Spices', 'Capsicum'] },
+    { name: 'Mixed Macaroni (Sri Lankan Style)', category: 'Pasta & Macaroni', description: 'Spicy Sri Lankan macaroni stir-fried with chicken, seafood and egg', ingredients: ['Macaroni', 'Chicken', 'Seafood', 'Egg', 'Spices'] },
+
+    // ── 7. Kottu (Full & Half Portions) ─────────────────────────────────────
+    { name: 'Vegetable Kottu [without Egg] (Full)', category: 'Kottu', description: 'Shredded godamba roti stir-fried with vegetables without egg full portion', ingredients: ['Godamba Roti', 'Cabbage', 'Carrots', 'Leeks', 'Curry sauce'], serves: '2 persons' },
+    { name: 'Vegetable Kottu [without Egg] (Half)', category: 'Kottu', description: 'Shredded godamba roti stir-fried with vegetables without egg half portion', ingredients: ['Godamba Roti', 'Cabbage', 'Carrots', 'Leeks', 'Curry sauce'], serves: '1 person' },
+
+    { name: 'Egg Kottu (Full)', category: 'Kottu', description: 'Classic Sri Lankan street kottu with egg and vegetables full portion', ingredients: ['Godamba Roti', 'Egg', 'Vegetables', 'Curry sauce'], serves: '2 persons' },
+    { name: 'Egg Kottu (Half)', category: 'Kottu', description: 'Classic Sri Lankan street kottu with egg and vegetables half portion', ingredients: ['Godamba Roti', 'Egg', 'Vegetables', 'Curry sauce'], serves: '1 person' },
+
+    { name: 'Chicken Kottu (Full)', category: 'Kottu', description: 'Chopped flatbread tossed with tender chicken, egg, veg and rich curry full portion', ingredients: ['Godamba Roti', 'Chicken', 'Egg', 'Vegetables', 'Curry gravy'], serves: '2 persons' },
+    { name: 'Chicken Kottu (Half)', category: 'Kottu', description: 'Chopped flatbread tossed with tender chicken, egg, veg and rich curry half portion', ingredients: ['Godamba Roti', 'Chicken', 'Egg', 'Vegetables', 'Curry gravy'], serves: '1 person' },
+
+    { name: 'Cheese Kottu (Full)', category: 'Kottu', description: 'Creamy melted cheese mixed into chopped roti and vegetables full portion', ingredients: ['Godamba Roti', 'Cheese', 'Milk', 'Egg', 'Vegetables'], serves: '2 persons' },
+    { name: 'Cheese Kottu (Half)', category: 'Kottu', description: 'Creamy melted cheese mixed into chopped roti and vegetables half portion', ingredients: ['Godamba Roti', 'Cheese', 'Milk', 'Egg', 'Vegetables'], serves: '1 person' },
+
+    { name: 'Chicken & Cheese Kottu (Full)', category: 'Kottu', description: 'Indulgent kottu loaded with chicken, rich melted cheese and egg full portion', ingredients: ['Godamba Roti', 'Chicken', 'Cheese', 'Egg', 'Vegetables'], serves: '2 persons' },
+    { name: 'Chicken & Cheese Kottu (Half)', category: 'Kottu', description: 'Indulgent kottu loaded with chicken, rich melted cheese and egg half portion', ingredients: ['Godamba Roti', 'Chicken', 'Cheese', 'Egg', 'Vegetables'], serves: '1 person' },
+
+    { name: 'Seafood Kottu (Full)', category: 'Kottu', description: 'Street kottu tossed with prawns, squid, fish and spices full portion', ingredients: ['Godamba Roti', 'Prawns', 'Squid', 'Fish', 'Egg', 'Vegetables'], serves: '2 persons' },
+    { name: 'Seafood Kottu (Half)', category: 'Kottu', description: 'Street kottu tossed with prawns, squid, fish and spices half portion', ingredients: ['Godamba Roti', 'Prawns', 'Squid', 'Fish', 'Egg', 'Vegetables'], serves: '1 person' },
+
+    { name: 'Mixed Kottu (Full)', category: 'Kottu', description: 'Signature kottu with chicken, seafood, egg and vegetables full portion', ingredients: ['Godamba Roti', 'Chicken', 'Seafood', 'Egg', 'Vegetables'], serves: '2 persons' },
+    { name: 'Mixed Kottu (Half)', category: 'Kottu', description: 'Signature kottu with chicken, seafood, egg and vegetables half portion', ingredients: ['Godamba Roti', 'Chicken', 'Seafood', 'Egg', 'Vegetables'], serves: '1 person' },
+
+    { name: 'Senari Special Kottu (Full)', category: 'Kottu', description: 'Chef special premium kottu loaded with meats, egg, cheese and rich gravy full portion', ingredients: ['Godamba Roti', 'Chicken', 'Sausage', 'Egg', 'Cheese', 'Chef Special Sauce'], serves: '2 persons' },
+    { name: 'Senari Special Kottu (Half)', category: 'Kottu', description: 'Chef special premium kottu loaded with meats, egg, cheese and rich gravy half portion', ingredients: ['Godamba Roti', 'Chicken', 'Sausage', 'Egg', 'Cheese', 'Chef Special Sauce'], serves: '1 person' },
+
+    // ── 8. Mains & Portions: Chicken ────────────────────────────────────────
+    { name: 'Devilled Chicken (or Chili Chicken)', category: 'Mains', description: 'Crispy fried chicken tossed in sweet, spicy and tangy devilled chili sauce', ingredients: ['Chicken', 'Capsicum', 'Onions', 'Devilled Chilli Sauce'] },
+    { name: 'Stew or Curry Chicken', category: 'Mains', description: 'Tender chicken slow cooked in rich Sri Lankan aromatic curry or stew gravy', ingredients: ['Chicken', 'Coconut milk', 'Curry spices', 'Curry leaves'] },
+    { name: 'Fried Chicken', category: 'Mains', description: 'Golden crispy deep-fried chicken portions seasoned with house spices', ingredients: ['Chicken', 'Spiced Flour Batter', 'Crispy Coating'] },
+    { name: 'Hot Batter Chicken', category: 'Mains', description: 'Bite-sized chicken fried in crispy hot batter tossed in spicy chili butter', ingredients: ['Chicken', 'Crispy Batter', 'Chili Flakes', 'Garlic Butter'] },
+    { name: 'Batter Garlic Chicken', category: 'Mains', description: 'Crispy batter-fried chicken infused with rich aromatic garlic sauce', ingredients: ['Chicken', 'Garlic', 'Batter', 'Spring Onions'] },
+    { name: 'Chicken Curry', category: 'Mains', description: 'Traditional homestyle spicy chicken curry with thick gravy', ingredients: ['Chicken', 'Roasted Curry Powder', 'Garlic', 'Pandan Leaves'] },
+
+    // ── 8. Mains & Portions: Pork ───────────────────────────────────────────
+    { name: 'Devilled Pork', category: 'Mains', description: 'Tender pork cubes tossed with tomatoes, capsicum and spicy devilled sauce', ingredients: ['Pork', 'Capsicum', 'Onion', 'Spicy Devilled Sauce'] },
+    { name: 'Stew or Curry or Chili Pork', category: 'Mains', description: 'Slow-cooked flavorful pork in rich curry spices or chili stew', ingredients: ['Pork', 'Chili', 'Curry Spices', 'Garlic', 'Ginger'] },
+    { name: 'Fried Pork', category: 'Mains', description: 'Deep fried crispy seasoned pork pieces', ingredients: ['Pork', 'Black pepper', 'House seasoning'] },
+    { name: 'Black Pepper Pork', category: 'Mains', description: 'Succulent pork pieces tossed in crushed black pepper and caramelized onions', ingredients: ['Pork', 'Crushed Black Pepper', 'Caramelized Onions', 'Soy sauce'] },
+
+    // ── 8. Mains & Portions: Fish ───────────────────────────────────────────
+    { name: 'Devilled or Chili Fish', category: 'Mains', description: 'Fried fish cubes stir-fried with capsicum, onions and fiery chili sauce', ingredients: ['Fish Fillets', 'Capsicum', 'Onions', 'Devilled Sauce'] },
+    { name: 'Stew or Curry Fish', category: 'Mains', description: 'Fresh fish fillets simmered in coconut milk curry or delicate stew', ingredients: ['Fish', 'Coconut Milk', 'Turmeric', 'Fenugreek', 'Curry leaves'] },
+    { name: 'Fried Fish', category: 'Mains', description: 'Crispy seasoned whole fried fish fillets', ingredients: ['Fish Fillets', 'Turmeric', 'Chili powder', 'Salt'] },
+    { name: 'Boiled Fish', category: 'Mains', description: 'Healthy fresh fish fillets boiled with herbs and pepper', ingredients: ['Fish', 'Pepper', 'Salt', 'Herb broth'] },
+    { name: 'Fish Fingers', category: 'Mains', description: 'Golden crumbed fish fillets served with dipping sauce', ingredients: ['Fish Fillets', 'Breadcrumbs', 'Egg wash', 'Tartar sauce'] },
+
+    // ── 8. Mains & Portions: Octopus (Sri Lankan Style) ─────────────────────
+    { name: 'Octopus Stew (Sri Lankan Style)', category: 'Mains', description: 'Tender octopus braised in mild aromatic Sri Lankan style stew with vegetables', ingredients: ['Octopus', 'Potatoes', 'Carrots', 'Black Pepper', 'Onions'] },
+    { name: 'Octopus Curry (Sri Lankan Style)', category: 'Mains', description: 'Slow cooked spicy octopus curry in roasted spices and coconut gravy', ingredients: ['Octopus', 'Roasted Curry Powder', 'Coconut Milk', 'Garlic', 'Goraka'] },
+    { name: 'Boiled Octopus with Salad', category: 'Mains', description: 'Tender boiled octopus seasoned and served alongside fresh garden salad', ingredients: ['Boiled Octopus', 'Lettuce', 'Cucumber', 'Tomato Salad', 'Lemon Vinaigrette'] },
   ];
 
-  for (const [year, monthIdx, targetCount] of monthlyConfigs) {
-    for (let i = 0; i < targetCount; i++) {
-      const createdAt = getRandomDateInMonth(year, monthIdx);
-      const status = 'COMPLETED';
-      const payStatus = paymentStatuses[i % paymentStatuses.length];
-      const type = orderTypes[i % orderTypes.length];
-      const customerName = customerNameCycle[i % customerNameCycle.length];
-      const customerMatch = customers.find(c => c.name === customerName);
-      const customerId = customerMatch ? customerMatch.id : null;
-
-      const selectedFoods = pickRandom(foodItems, 2, 4);
-      const items = selectedFoods.map((f) => {
-        const qty = 1 + Math.floor(Math.random() * 3);
-        const unitPrice = Number(f.price);
-        return { foodId: f.id, quantity: qty, unitPrice, subtotal: unitPrice * qty };
-      });
-      const subtotal = Math.round(items.reduce((s, item) => s + item.subtotal, 0));
-      const discountPct = Math.random() > 0.6 ? Math.floor(Math.random() * 10) : 0;
-      const discount = Math.round(subtotal * discountPct / 100);
-      const total = subtotal - discount;
-      const amountPaid = payStatus === 'PAID' ? total : payStatus === 'PARTIAL' ? Math.round(total * 0.6) : 0;
-
-      await prisma.order.create({
+  // ── Seed Food Items with safe Json array defaults for images & ingredients ──
+  const foodItems = await Promise.all(
+    foodItemsData.map((item, index) =>
+      prisma.foodItem.create({
         data: {
-          invoiceNumber: `INV${++invoiceSeq}`,
-          type,
-          status,
-          paymentStatus: payStatus,
-          subtotal,
-          discount,
-          total,
-          amountPaid,
-          customerId,
-          createdAt,
-          updatedAt: new Date(createdAt.getTime() + 3600000),
-          notes: JSON.stringify({ customerName }),
-          items: { create: items },
+          name: item.name,
+          price: 1000.0, // 🌟 Default price as requested
+          description: item.description,
+          categoryId: foodCatMap[item.category] || foodCategories[0].id,
+          image: null,
+          // Explicit empty JSON array for the catalog column
+          images: [],
+          prepTimeMinutes: 15, // 🌟 Default prep time: 15 min
+          calories: 10,        // 🌟 Default calories: 10
+          serves: item.serves || '1 person', // 🌟 Default serves: 1 person
+          ingredients: item.ingredients || [], // 🌟 Ingredients array for Key Ingredients section
+          isHealthy: item.name.toLowerCase().includes('vegetable') || item.name.toLowerCase().includes('boiled'),
+          isNew: false,
+          isFeatured: false,
+          isAvailable: true,
+          sortOrder: index + 1,
         },
-      });
+      })
+    )
+  );
+  console.log(`   ✅ Created ${foodItems.length} food items from PDF Menu (Price: 1000, Prep: 15m, Cal: 10, Serves: 1 person)`);
+  
 
-      if (monthIdx === 3) ordersApril++;
-      else if (monthIdx === 4) ordersMay++;
-      else ordersJune++;
-    }
-  }
-  console.log(`   ✅ Created ${ordersApril + ordersMay + ordersJune} historical orders (Apr:${ordersApril}, May:${ordersMay}, Jun:${ordersJune})`);
-
-  // ── Suppliers ──────────────────────────────────────────────────────────
-  const supplierData = [
-    { name: 'Perera Groceries', phone: '0771112233', category: 'Groceries', email: 'info@pereragroceries.lk', address: '15 Main St, Colombo 11' },
-    { name: 'Sena Poultry', phone: '0712223344', category: 'Meat', email: 'orders@senapoultry.lk', address: '88 Industrial Zone, Seeduwa' },
-    { name: 'Green Valley Farms', phone: '0763334455', category: 'Vegetables', email: 'farm@greenvalley.lk', address: '42 Kandy Rd, Peradeniya' },
-    { name: 'Ceylon Spice Traders', phone: '0774445566', category: 'Spices', email: 'sales@ceylonspice.lk', address: '7 Spice Market, Matale' },
-    { name: 'Ocean Fresh Seafood', phone: '0705556677', category: 'Seafood', email: 'catch@oceanfresh.lk', address: '32 Harbour Rd, Negombo' },
-    { name: 'Lanka Dairy Co-op', phone: '0786667788', category: 'Dairy', email: 'info@lankadairy.lk', address: '21 Lake Rd, Kurunegala' },
-  ];
-  const suppliers = await Promise.all(supplierData.map((s) => prisma.supplier.create({ data: s })));
-  console.log(`   ✅ Created ${suppliers.length} suppliers`);
-
-  // ── Purchase Orders (for Payables) ────────────────────────────────────
-  let poSeq = 100;
-  const purchaseOrderData = [
-    { si: 0, total: 45000, paid: 0, status: 'UNPAID', notes: 'Monthly grocery supply' },
-    { si: 0, total: 28000, paid: 0, status: 'UNPAID', notes: 'Oil, sugar, canned goods' },
-    { si: 1, total: 32000, paid: 32000, status: 'PAID', notes: 'Chicken breast bulk order' },
-    { si: 1, total: 18500, paid: 0, status: 'UNPAID', notes: 'Chicken thighs + eggs' },
-    { si: 2, total: 12000, paid: 6000, status: 'PARTIAL', notes: 'Fresh vegetables' },
-    { si: 2, total: 8500, paid: 0, status: 'UNPAID', notes: 'Herbs & exotic greens' },
-    { si: 3, total: 9600, paid: 0, status: 'UNPAID', notes: 'Spice blend assortment' },
-    { si: 3, total: 14000, paid: 14000, status: 'PAID', notes: 'Turmeric, cinnamon bulk' },
-    { si: 4, total: 22000, paid: 0, status: 'UNPAID', notes: 'Prawns, fish fillets, squid' },
-    { si: 5, total: 16000, paid: 8000, status: 'PARTIAL', notes: 'Milk, yoghurt, cheese' },
-  ];
-  for (const po of purchaseOrderData) {
-    const supplierId = suppliers[po.si].id;
-    await prisma.purchaseOrder.create({
-      data: { poNumber: `PO-${++poSeq}`, supplierId, totalAmount: po.total, amountPaid: po.paid, paymentStatus: po.status as any, notes: po.notes, receivedAt: new Date() },
-    });
-    const agg = await prisma.purchaseOrder.aggregate({ where: { supplierId }, _sum: { totalAmount: true, amountPaid: true } });
-    const tp = Number(agg._sum.totalAmount || 0);
-    const tpd = Number(agg._sum.amountPaid || 0);
-    await prisma.supplier.update({ where: { id: supplierId }, data: { totalPurchases: tp, payableAmount: Math.max(0, tp - tpd) } });
-  }
-  console.log(`   ✅ Created ${purchaseOrderData.length} purchase orders`);
-
-  // ── Supplier Ledger History ─────────────────────────────────────────────
-  await prisma.supplierPayment.create({ data: { supplierId: suppliers[0].id, amountPaid: 15000, notes: 'Partial payment for monthly grocery supply' } });
-  await prisma.supplierPayment.create({ data: { supplierId: suppliers[2].id, amountPaid: 6000, notes: 'Payment for vegetables delivery' } });
-  await prisma.supplierReminder.create({ data: { supplierId: suppliers[0].id, message: 'Dear Perera Groceries, please process your outstanding invoices with Senari Restaurant.', status: 'sent' } });
-  await prisma.supplierReminder.create({ data: { supplierId: suppliers[4].id, message: 'Dear Ocean Fresh Seafood, kindly review your pending payments. Thank you!', status: 'sent' } });
-  console.log('   ✅ Created supplier payments & reminders (ledger history)');
-
-  // ── Restaurant Tables ──────────────────────────────────────────────────
+ // ── Restaurant Tables (Required for Dine-in POS Orders) ───────────────────
   const tableData: { tableNumber: string; capacity: number; status: 'AVAILABLE' | 'OCCUPIED' | 'RESERVED'; notes: string | null }[] = [
     { tableNumber: 'T1', capacity: 2, status: 'AVAILABLE', notes: 'Window side' },
     { tableNumber: 'T2', capacity: 4, status: 'AVAILABLE', notes: 'Near entrance' },
-    { tableNumber: 'T3', capacity: 4, status: 'OCCUPIED', notes: null },
+    { tableNumber: 'T3', capacity: 4, status: 'AVAILABLE', notes: null },
     { tableNumber: 'T4', capacity: 6, status: 'AVAILABLE', notes: 'Family table' },
-    { tableNumber: 'T5', capacity: 2, status: 'RESERVED', notes: 'VIP booking at 8pm - Mr. Kamal' },
-    { tableNumber: 'T6', capacity: 4, status: 'OCCUPIED', notes: null },
+    { tableNumber: 'T5', capacity: 2, status: 'AVAILABLE', notes: null },
+    { tableNumber: 'T6', capacity: 4, status: 'AVAILABLE', notes: null },
     { tableNumber: 'T7', capacity: 8, status: 'AVAILABLE', notes: 'Large group table' },
-    { tableNumber: 'VIP1', capacity: 4, status: 'AVAILABLE', notes: 'VIP section - requires minimum spend Rs. 5000' },
-    { tableNumber: 'VIP2', capacity: 6, status: 'RESERVED', notes: 'Birthday celebration - 7:30pm' },
+    { tableNumber: 'VIP1', capacity: 4, status: 'AVAILABLE', notes: 'VIP section' },
+    { tableNumber: 'VIP2', capacity: 6, status: 'AVAILABLE', notes: null },
     { tableNumber: 'B1', capacity: 4, status: 'AVAILABLE', notes: 'Balcony area' },
   ];
   const tables = await Promise.all(tableData.map((t) => prisma.restaurantTable.create({ data: t })));
   console.log(`   ✅ Created ${tables.length} restaurant tables`);
 
-  console.log('🎉 Seeding complete!');
+  // ── Default System Settings (Required singleton row for POS) ──────────────
+  await prisma.systemSetting.upsert({
+    where: { id: 1 },
+    update: {},
+    create: {
+      id: 1,
+      hotelName: 'Senari Chinese Restaurant',
+      reportTagline: 'Business Intelligence & Performance Report',
+      confidentialityNotice: 'SENARI CHINESE RESTAURANT — Confidential',
+      currencySymbol: 'Rs.',
+      compactTableView: false,
+      darkMode: true,
+      playOrderSound: true,
+      autoAcceptOrders: false,
+      lowStockThreshold: 10,
+      pdfOrientation: 'portrait',
+    },
+  });
+  console.log('   ✅ Initialized system settings');
+
+  console.log('🎉 Clean production seed complete! Ready for client handover.');
 }
 
 main()

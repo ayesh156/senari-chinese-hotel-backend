@@ -46,8 +46,13 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
       amountPaid,
       customerName,
       customerId,
+      // 🌟 1. Web Checkout එකෙන් එවන අමතර fields ලබා ගැනීම
+      phone,
+      arrivalDate,
+      arrivalTime,
     } = req.body;
 
+    // 🌟 2. OrderService.create වෙත phone, arrivalDate, arrivalTime යැවීම
     const order = await OrderService.create({
       orderType,
       items,
@@ -57,16 +62,25 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
       amountPaid,
       customerName,
       customerId: customerId ? parseInt(customerId, 10) : undefined,
+      phone,
+      arrivalDate,
+      arrivalTime,
     });
 
-    // Non-blocking audit
-    const authReq = req as AuthRequest;
-    AuditService.created(
-      AuditEntities.ORDER,
-      order.id,
-      { invoiceNumber: order.invoiceNumber, total: total, type: orderType },
-      auditCtx(authReq)
-    );
+    // 🛡️ 3. Safe Non-blocking audit (Public customer orders වලදී crash නොවී ක්‍රියාත්මක වීමට)
+    try {
+      const authReq = req as AuthRequest;
+      if (typeof AuditService !== 'undefined' && typeof auditCtx === 'function') {
+        AuditService.created(
+          AuditEntities.ORDER,
+          order.id,
+          { invoiceNumber: order.invoiceNumber, total: total, type: orderType },
+          auditCtx(authReq)
+        );
+      }
+    } catch (auditErr) {
+      // Ignore audit failure for guest/web checkouts
+    }
 
     res.status(201).json({ success: true, data: order });
   } catch (error) {

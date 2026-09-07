@@ -1,5 +1,5 @@
 import prisma from '../lib/prisma';
-import { getIO } from '../lib/socket';
+import { broadcastToRoom } from '../gateways/checkoutSync.gateway.js';
 
 interface OrderItemInput {
   foodId: number;
@@ -16,6 +16,9 @@ interface CreateOrderInput {
   amountPaid?: number;
   customerName?: string;
   customerId?: number;
+  phone?: string;
+  arrivalDate?: string;
+  arrivalTime?: string;
 }
 
 interface UpdateOrderInput {
@@ -90,6 +93,15 @@ export class OrderService {
     const isPaidUpfront = parsedAmountPaid >= grandTotal - 0.01;
     const finalPaymentStatus = isPaidUpfront ? 'PAID' : (parsedAmountPaid > 0 ? 'PARTIAL' : 'UNPAID');
 
+    // 🛡️ Backend Sri Lankan Phone Validation (07X-XXXXXXX / +947XXXXXXXX)
+    if (data.phone) {
+      const cleanPhone = data.phone.replace(/[\s\-]/g, '');
+      const slPhoneRegex = /^(?:0|(?:\+94))7[01245678][0-9]{7}$/;
+      if (!slPhoneRegex.test(cleanPhone)) {
+        throw Object.assign(new Error('Invalid Sri Lankan mobile number entered'), { statusCode: 400 });
+      }
+    }
+
     const order = await prisma.$transaction(async (tx) => {
       const created = await tx.order.create({
         data: {
@@ -102,7 +114,12 @@ export class OrderService {
           total: grandTotal,
           amountPaid: parsedAmountPaid,
           customerId: data.customerId || null,
-          notes: JSON.stringify({ customerName: data.customerName }),
+          notes: JSON.stringify({
+            customerName: data.customerName,
+            phone: data.phone,
+            arrivalDate: data.arrivalDate,
+            arrivalTime: data.arrivalTime,
+          }),
           items: {
             create: data.items.map((item) => ({
               foodId: item.foodId,
@@ -112,17 +129,34 @@ export class OrderService {
             })),
           },
         },
-        include: { items: { include: { food: true } } },
+        include: {
+          items: { include: { food: true } },
+          customer: { select: { id: true, name: true, phone: true } },
+        },
       });
       return created;
     });
 
-    // Broadcast to Live Orders Kanban + Invoices page
-    try { getIO().emit('newOrder', order); } catch {}
-    try { getIO().emit('invoiceCreated', order); } catch {}
+    // 🌟 Live Orders සහ Invoices Card වල පාරිභෝගික නම/දුරකථන අංකය නිවැරදිව පෙන්වීමට Object එක සැකසීම
+    const formattedOrder = {
+      ...order,
+      customerName: data.customerName || 'Walk-in Customer',
+      customer: {
+        id: data.customerId || 0,
+        name: data.customerName || 'Walk-in Customer',
+        phone: data.phone || '',
+      },
+    };
+
+    // 🌟 Broadcast to Live Orders Kanban & Invoices page via SSE
+    try {
+      broadcastToRoom('default-tenant:SHOP', 'invoice_finalized', formattedOrder);
+    } catch (err) {
+      console.warn('[SSE Broadcast Error]:', err);
+    }
 
     console.log(`[DB] POST /orders → #${order.id} (${order.invoiceNumber}) status=${order.status} payment=${finalPaymentStatus}`);
-    return order;
+    return formattedOrder;
   }
 
   static async update(id: number, data: UpdateOrderInput) {
@@ -159,8 +193,12 @@ export class OrderService {
       });
     });
 
-    // Broadcast update event
-    try { getIO().emit('invoiceUpdated', updated); } catch {}
+    // 🌟 Broadcast invoice update event via SSE
+    try {
+      broadcastToRoom('default-tenant:SHOP', 'invoice_updated', updated);
+    } catch (err) {
+      console.warn('[SSE Broadcast Error]:', err);
+    }
 
     console.log(`[DB] PUT /orders/${id} → updated (${data.orderType}, ${data.items.length} items)`);
     return updated;
@@ -178,7 +216,12 @@ export class OrderService {
       include: { items: { include: { food: true } } },
     });
 
-    try { getIO().emit('orderStatusChanged', updated); } catch {}
+    // 🌟 Broadcast status change (Preparing/Ready/Completed) via SSE
+    try {
+      broadcastToRoom('default-tenant:SHOP', 'order_status_changed', updated);
+    } catch (err) {
+      console.warn('[SSE Broadcast Error]:', err);
+    }
 
     return updated;
   }

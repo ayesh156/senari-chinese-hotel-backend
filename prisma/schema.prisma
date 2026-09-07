@@ -96,6 +96,7 @@ model FoodItem {
   categoryId Int
   category Category @relation("FoodCategory", fields: [categoryId], references: [id])
   image String?
+  images Json @default("[]")
   prepTimeMinutes Int @default(15)
   calories Int @default(450)
   serves String @default("1-2 persons")

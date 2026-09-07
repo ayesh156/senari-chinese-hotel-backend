@@ -49,9 +49,25 @@ export const createFood = async (req: Request, res: Response, next: NextFunction
       name, price, description, categoryId,
       isAvailable, isNew, isFeatured, isHealthy,
       prepTimeMinutes, calories, imageUrl,
-      serves, ingredients,
+      serves, ingredients, primaryImage, existingImages,
     } = req.body;
-    const imageFilename = req.file?.filename;
+
+    // Handle multiple files from req.files
+    const files = (req.files as Express.Multer.File[]) || [];
+    const uploadedPaths = files.map(f => `/uploads/foods/${f.filename}`);
+
+    // Parse existing image paths already in DB
+    let parsedExisting: string[] = [];
+    if (existingImages) {
+      try {
+        parsedExisting = typeof existingImages === 'string' ? JSON.parse(existingImages) : existingImages;
+      } catch {
+        parsedExisting = [existingImages];
+      }
+    }
+
+    const imagesCatalog = [...parsedExisting, ...uploadedPaths];
+    const finalPrimary = primaryImage || imagesCatalog[0] || (files[0] ? `/uploads/foods/${files[0].filename}` : undefined);
 
     const parsedPrice = price !== undefined ? parseFloat(price) : undefined;
     const parsedCategoryId = categoryId ? parseInt(categoryId, 10) : undefined;
@@ -63,6 +79,7 @@ export const createFood = async (req: Request, res: Response, next: NextFunction
 
     const toBool = (v: any) => v === 'true' || v === true;
 
+    // Pass image catalog array and selected primary image to FoodService
     const food = await FoodService.create({
       name,
       price: parsedPrice,
@@ -76,7 +93,8 @@ export const createFood = async (req: Request, res: Response, next: NextFunction
       calories: parsedCalories,
       serves: serves || undefined,
       ingredients: parsedIngredients,
-      imageFilename,
+      primaryImage: finalPrimary,
+      imagesCatalog,
       imageUrl,
     });
 
@@ -101,9 +119,25 @@ export const updateFood = async (req: Request, res: Response, next: NextFunction
       name, price, description, categoryId,
       isAvailable, isNew, isFeatured, isHealthy,
       prepTimeMinutes, calories, imageUrl,
-      serves, ingredients,
+      serves, ingredients, primaryImage, existingImages,
     } = req.body;
-    const imageFilename = req.file?.filename;
+
+    // Handle multiple files from req.files
+    const files = (req.files as Express.Multer.File[]) || [];
+    const uploadedPaths = files.map(f => `/uploads/foods/${f.filename}`);
+
+    // Parse existing image paths already in DB
+    let parsedExisting: string[] = [];
+    if (existingImages) {
+      try {
+        parsedExisting = typeof existingImages === 'string' ? JSON.parse(existingImages) : existingImages;
+      } catch {
+        parsedExisting = [existingImages];
+      }
+    }
+
+    const imagesCatalog = [...parsedExisting, ...uploadedPaths];
+    const finalPrimary = primaryImage || imagesCatalog[0] || (files[0] ? `/uploads/foods/${files[0].filename}` : undefined);
 
     const oldFood = await FoodService.getById(id);
 
@@ -113,6 +147,7 @@ export const updateFood = async (req: Request, res: Response, next: NextFunction
       ? (typeof ingredients === 'string' ? ingredients.split(',').map((s: string) => s.trim()).filter(Boolean) : ingredients)
       : undefined;
 
+    // Update food with new image catalog array and selected primary image
     const food = await FoodService.update(id, {
       name,
       price: parsedPrice,
@@ -126,7 +161,8 @@ export const updateFood = async (req: Request, res: Response, next: NextFunction
       calories: calories !== undefined ? parseInt(calories, 10) : undefined,
       serves: serves || undefined,
       ingredients: parsedIngredients,
-      imageFilename,
+      primaryImage: finalPrimary,
+      imagesCatalog,
       imageUrl,
     });
 

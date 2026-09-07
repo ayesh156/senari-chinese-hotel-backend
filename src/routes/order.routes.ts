@@ -18,8 +18,8 @@ router.get('/', authMiddleware, getOrders);
 router.get('/live', authMiddleware, getLiveOrders);
 // GET /api/orders/:id
 router.get('/:id', authMiddleware, getOrderById);
-// POST /api/orders — any authenticated staff can create orders
-router.post('/', authMiddleware, createOrder);
+// POST /api/orders — Public: Allows web customers & POS to place pre-orders without token
+router.post('/', createOrder);
 // PUT /api/orders/:id — ADMIN/MANAGER can update orders
 router.put('/:id', authMiddleware, authorize('ADMIN', 'MANAGER'), updateOrder);
 // PUT /api/orders/:id/status — staff can update order status

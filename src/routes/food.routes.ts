@@ -11,10 +11,10 @@ router.get('/', getFoods);
 router.get('/popular', getPopularFoods);
 // GET /api/foods/:id — public single food item
 router.get('/:id', getFoodById);
-// POST /api/foods — ADMIN/MANAGER can create
-router.post('/', authMiddleware, authorize('ADMIN', 'MANAGER'), upload.single('image'), createFood);
-// PUT /api/foods/:id — ADMIN/MANAGER can update
-router.put('/:id', authMiddleware, authorize('ADMIN', 'MANAGER'), upload.single('image'), updateFood);
+// POST /api/foods — ADMIN/MANAGER can create with multiple images support
+router.post('/', authMiddleware, authorize('ADMIN', 'MANAGER'), upload.array('images', 10), createFood);
+// PUT /api/foods/:id — ADMIN/MANAGER can update with multiple images support
+router.put('/:id', authMiddleware, authorize('ADMIN', 'MANAGER'), upload.array('images', 10), updateFood);
 // DELETE /api/foods/:id — ADMIN only
 router.delete('/:id', authMiddleware, authorize('ADMIN'), deleteFood);
 
