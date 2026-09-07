@@ -197,17 +197,33 @@ export class FoodService {
           : [];
       }
 
-      // Handle image catalog and primary selection
+      // Handle image catalog and primary selection with automatic local file cleanup if replaced by web link
       if (data.imagesCatalog !== undefined) {
-        // Ensure catalog is always a valid JSON serializable array of strings
         updateData.images = Array.isArray(data.imagesCatalog)
           ? data.imagesCatalog
           : [];
       }
-      if (data.primaryImage !== undefined && data.primaryImage !== "") {
-        updateData.image = data.primaryImage;
-      } else if (data.imageFilename !== undefined) {
-        updateData.image = getImageUrl(data.imageFilename);
+
+      const newPrimary = (data.primaryImage !== undefined && data.primaryImage !== "")
+        ? data.primaryImage
+        : (data.imageFilename !== undefined ? getImageUrl(data.imageFilename) : undefined);
+
+      if (newPrimary !== undefined) {
+        // Check if previous image was a physical local file and clean it up from disk
+        const existing = await prisma.foodItem.findUnique({ where: { id } });
+        if (existing?.image && !existing.image.startsWith("http")) {
+          const oldFilename = path.basename(existing.image);
+          const oldFilePath = path.join(UPLOADS_DIR, oldFilename);
+          if (fs.existsSync(oldFilePath)) {
+            try {
+              fs.unlinkSync(oldFilePath);
+              console.log(`[FS] Cleaned up replaced local image file: ${oldFilePath}`);
+            } catch (unlinkErr) {
+              console.warn("[FS] Failed to remove replaced image file:", unlinkErr);
+            }
+          }
+        }
+        updateData.image = newPrimary;
       }
 
       const food = await prisma.foodItem.update({
