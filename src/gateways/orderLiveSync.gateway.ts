@@ -113,3 +113,13 @@ export function broadcastLiveEvent(channel: 'orders' | 'invoices', event: string
     }
   });
 }
+
+/**
+ * 🌟 Legacy / Service Compatibility Alias
+ * order.service.ts සහ invoice.service.ts සඳහා broadcast සහාය ලබා දෙයි
+ */
+export function broadcastToRoom(roomKey: string, event: string, payload: any, senderClientId?: string) {
+  // Event නම අනුව orders හෝ invoices channel එක ස්වයංක්‍රීයව තෝරා ගනී
+  const channel = event.includes('invoice') ? 'invoices' : 'orders';
+  broadcastLiveEvent(channel, event, payload);
+}
