@@ -3,12 +3,11 @@
   "version": "1.0.0",
   "description": "Backend API for Senari Restaurant",
   "type": "module",
-  "main": "src/main.ts",
+ "main": "src/main.ts",
   "scripts": {
     "dev": "tsx watch src/main.ts",
-    "build": "npm run postinstall",
-    "start": "node --import tsx src/main.ts",
-    "start:prod": "node --import tsx src/main.ts",
+    "build": "npx prisma generate",
+    "start": "node src/main.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "seed": "npx prisma db seed",
     "postinstall": "npx prisma generate"
