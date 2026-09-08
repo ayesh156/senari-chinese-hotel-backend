@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authMiddleware, authorize } from '../middlewares/auth.middleware';
+import { authMiddleware, authorize } from '../middlewares/auth.middleware.ts';
 import {
   getInventoryItems,
   getInventoryItemById,
@@ -8,7 +8,7 @@ import {
   updateInventoryItem,
   adjustInventoryItemStock,
   deleteInventoryItem,
-} from '../controllers/inventory.controller';
+} from '../controllers/inventory.controller.ts';
 
 const router = Router();
 

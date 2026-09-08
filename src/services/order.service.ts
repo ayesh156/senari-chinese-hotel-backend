@@ -1,5 +1,5 @@
-import prisma from '../lib/prisma';
-import { broadcastToRoom } from '../gateways/orderLiveSync.gateway.js';
+import prisma from '../lib/prisma.ts';
+import { broadcastToRoom } from '../gateways/orderLiveSync.gateway.ts';
 
 interface OrderItemInput {
   foodId: number;

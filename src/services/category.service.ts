@@ -1,5 +1,5 @@
 import { CategoryType } from '@prisma/client';
-import prisma from '../lib/prisma';
+import prisma from '../lib/prisma.ts';
 
 interface CreateCategoryInput {
   name: string;

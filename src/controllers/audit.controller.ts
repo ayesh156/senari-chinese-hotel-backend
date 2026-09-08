@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { AuditService } from '../services/audit.service';
-import type { AuthRequest } from '../middlewares/auth.middleware';
+import { AuditService } from '../services/audit.service.ts';
+import type { AuthRequest } from '../middlewares/auth.middleware.ts';
 
 /**
  * GET /api/audit-logs

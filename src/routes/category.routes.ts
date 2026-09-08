@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import { authMiddleware, authorize } from '../middlewares/auth.middleware';
+import { authMiddleware, authorize } from '../middlewares/auth.middleware.ts';
 import {
   getCategories,
   createCategory,
   updateCategory,
   deleteCategory,
-} from '../controllers/category.controller';
+} from '../controllers/category.controller.ts';
 
 const router = Router();
 

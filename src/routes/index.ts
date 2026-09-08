@@ -1,20 +1,20 @@
 import { Router } from 'express';
-import auditRoutes from './audit.routes';
-import authRoutes from './auth.routes';
-import foodRoutes from './food.routes';
-import categoryRoutes from './category.routes';
-import unitRoutes from './unit.routes';
-import orderRoutes from './order.routes';
-import inventoryRoutes from './inventory.routes';
-import customerRoutes from './customer.routes';
-import supplierRoutes from './supplier.routes';
-import purchaseOrderRoutes from './purchaseOrder.routes';
-import tableRoutes from './table.routes';
-import analyticsRoutes from './analytics.routes';
-import dashboardRoutes from './dashboard.routes';
-import invoiceRoutes from './invoice.routes';
-import settingsRoutes from './settings.routes';
-import userRoutes from './user.routes';
+import auditRoutes from './audit.routes.ts';
+import authRoutes from './auth.routes.ts';
+import foodRoutes from './food.routes.ts';
+import categoryRoutes from './category.routes.ts';
+import unitRoutes from './unit.routes.ts';
+import orderRoutes from './order.routes.ts';
+import inventoryRoutes from './inventory.routes.ts';
+import customerRoutes from './customer.routes.ts';
+import supplierRoutes from './supplier.routes.ts';
+import purchaseOrderRoutes from './purchaseOrder.routes.ts';
+import tableRoutes from './table.routes.ts';
+import analyticsRoutes from './analytics.routes.ts';
+import dashboardRoutes from './dashboard.routes.ts';
+import invoiceRoutes from './invoice.routes.ts';
+import settingsRoutes from './settings.routes.ts';
+import userRoutes from './user.routes.ts';
 
 const router = Router();
 

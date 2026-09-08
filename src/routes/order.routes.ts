@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authMiddleware, authorize } from '../middlewares/auth.middleware';
+import { authMiddleware, authorize } from '../middlewares/auth.middleware.ts';
 import {
   getOrders,
   getLiveOrders,
@@ -8,7 +8,7 @@ import {
   updateOrder,
   updateOrderStatus,
   deleteOrder,
-} from '../controllers/order.controller';
+} from '../controllers/order.controller.ts';
 
 const router = Router();
 

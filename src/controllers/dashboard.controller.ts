@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { DashboardService } from '../services/dashboard.service';
+import { DashboardService } from '../services/dashboard.service.ts';
 
 /**
  * GET /api/dashboard/summary

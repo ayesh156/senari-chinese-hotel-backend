@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { TableService } from '../services/table.service';
+import { TableService } from '../services/table.service.ts';
 
 export const getTables = async (req: Request, res: Response, next: NextFunction) => {
   try {

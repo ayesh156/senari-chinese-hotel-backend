@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authMiddleware, authorize } from '../middlewares/auth.middleware';
+import { authMiddleware, authorize } from '../middlewares/auth.middleware.ts';
 import {
   createPurchaseOrder,
   getPurchaseOrders,
@@ -7,7 +7,7 @@ import {
   updatePurchaseOrder,
   deletePurchaseOrder,
   settlePurchaseOrder,
-} from '../controllers/purchaseOrder.controller';
+} from '../controllers/purchaseOrder.controller.ts';
 
 const router = Router();
 

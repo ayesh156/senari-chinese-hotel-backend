@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { PurchaseOrderService } from '../services/purchaseOrder.service';
+import { PurchaseOrderService } from '../services/purchaseOrder.service.ts';
 
 export const createPurchaseOrder = async (req: Request, res: Response, next: NextFunction) => {
   try {

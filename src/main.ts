@@ -8,9 +8,9 @@ import path from 'path';
 import fs from 'fs';
 import http from 'http';
 import { fileURLToPath } from 'url';
-import routes from './routes';
-import { errorHandler } from './middlewares/errorHandler.middleware';
-import { orderLiveSyncRouter } from './gateways/orderLiveSync.gateway';
+import routes from './routes/index.ts';
+import { errorHandler } from './middlewares/errorHandler.middleware.ts';
+import { orderLiveSyncRouter } from './gateways/orderLiveSync.gateway.ts';
 
 // 🛡️ ==========================================================
 // ZERO-CRASH PROCESS SHIELD: Prevents entire server shutdown

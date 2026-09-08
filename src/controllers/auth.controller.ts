@@ -1,9 +1,9 @@
 import bcrypt from 'bcryptjs';
 import { Request, Response, NextFunction } from 'express';
-import prisma from '../lib/prisma';
-import { AuthService } from '../services/auth.service';
-import { AuditService, AuditActions, AuditEntities } from '../services/audit.service';
-import type { AuthRequest } from '../middlewares/auth.middleware';
+import prisma from '../lib/prisma.ts';
+import { AuthService } from '../services/auth.service.ts';
+import { AuditService, AuditActions, AuditEntities } from '../services/audit.service.ts';
+import type { AuthRequest } from '../middlewares/auth.middleware.ts';
 
 function getClientIp(req: Request): string | undefined {
   const forwarded = req.headers['x-forwarded-for'];

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { SettingsService } from '../services/settings.service';
+import { SettingsService } from '../services/settings.service.ts';
 
 export const getSettings = async (_req: Request, res: Response, next: NextFunction) => {
   try {

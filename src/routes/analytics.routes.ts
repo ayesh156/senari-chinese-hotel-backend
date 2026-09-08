@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { authMiddleware, authorize } from '../middlewares/auth.middleware';
-import { getDashboard, getDashboardSummary, getRevenueChart, getTopCategories, getFoodRankings, getDetailedAnalytics, getHourlyTrafficHandler, getInventoryEfficiencyHandler, getPaymentDistributionHandler, getMostProfitableFoodsHandler } from '../controllers/analytics.controller';
+import { authMiddleware, authorize } from '../middlewares/auth.middleware.ts';
+import { getDashboard, getDashboardSummary, getRevenueChart, getTopCategories, getFoodRankings, getDetailedAnalytics, getHourlyTrafficHandler, getInventoryEfficiencyHandler, getPaymentDistributionHandler, getMostProfitableFoodsHandler } from '../controllers/analytics.controller.ts';
 
 const router = Router();
 

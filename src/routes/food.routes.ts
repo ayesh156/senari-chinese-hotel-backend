@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { authMiddleware, authorize } from '../middlewares/auth.middleware';
-import { getFoods, getFoodById, getPopularFoods, createFood, updateFood, deleteFood } from '../controllers/food.controller';
-import { upload } from '../middlewares/upload.middleware';
+import { authMiddleware, authorize } from '../middlewares/auth.middleware.ts';
+import { getFoods, getFoodById, getPopularFoods, createFood, updateFood, deleteFood } from '../controllers/food.controller.ts';
+import { upload } from '../middlewares/upload.middleware.ts';
 
 const router = Router();
 

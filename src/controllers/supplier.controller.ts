@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { SupplierService } from '../services/supplier.service';
+import { SupplierService } from '../services/supplier.service.ts';
 
 export const getSuppliers = async (_req: Request, res: Response, next: NextFunction) => {
   try { res.json({ success: true, data: await SupplierService.getAll() }); } catch (e) { next(e); }

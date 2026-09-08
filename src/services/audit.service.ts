@@ -1,4 +1,4 @@
-import prisma from '../lib/prisma';
+import prisma from '../lib/prisma.ts';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export interface AuditLogInput {

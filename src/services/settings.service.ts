@@ -1,6 +1,6 @@
-import prisma from '../lib/prisma';
-import { AnalyticsService } from './analytics.service';
-import { DashboardService } from './dashboard.service';
+import prisma from '../lib/prisma.ts';
+import { AnalyticsService } from './analytics.service.ts';
+import { DashboardService } from './dashboard.service.ts';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

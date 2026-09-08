@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import type { AuthRequest } from '../middlewares/auth.middleware';
-import { OrderService } from '../services/order.service';
-import { AuditService, AuditEntities } from '../services/audit.service';
-import { broadcastLiveEvent } from '../gateways/orderLiveSync.gateway';
+import type { AuthRequest } from '../middlewares/auth.middleware.ts';
+import { OrderService } from '../services/order.service.ts';
+import { AuditService, AuditEntities } from '../services/audit.service.ts';
+import { broadcastLiveEvent } from '../gateways/orderLiveSync.gateway.ts';
 
 function auditCtx(authReq: AuthRequest) {
   return { userId: authReq.user?.userId, userName: authReq.user?.email ?? undefined, userRole: authReq.user?.role ?? undefined };

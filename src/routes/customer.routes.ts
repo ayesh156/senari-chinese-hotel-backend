@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import { authMiddleware, authorize } from '../middlewares/auth.middleware';
+import { authMiddleware, authorize } from '../middlewares/auth.middleware.ts';
 import {
   getCustomers, getCustomerById, getCustomerPayments, getCustomerReminders,
   createCustomer, updateCustomer, deleteCustomer,
   settleCustomerDue, sendCustomerReminder,
-} from '../controllers/customer.controller';
-import { uploadCustomerAvatar } from '../middlewares/uploadCustomer.middleware';
+} from '../controllers/customer.controller.ts';
+import { uploadCustomerAvatar } from '../middlewares/uploadCustomer.middleware.ts';
 
 const router = Router();
 

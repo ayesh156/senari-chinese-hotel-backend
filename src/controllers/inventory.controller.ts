@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import type { AuthRequest } from '../middlewares/auth.middleware';
-import { InventoryService } from '../services/inventory.service';
-import { AuditService, AuditEntities, AuditActions } from '../services/audit.service';
+import type { AuthRequest } from '../middlewares/auth.middleware.ts';
+import { InventoryService } from '../services/inventory.service.ts';
+import { AuditService, AuditEntities, AuditActions } from '../services/audit.service.ts';
 
 function auditCtx(authReq: AuthRequest) {
   return { userId: authReq.user?.userId, userName: authReq.user?.email ?? undefined, userRole: authReq.user?.role ?? undefined };

@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { authMiddleware, authorize } from '../middlewares/auth.middleware';
-import { getSuppliers, getSupplierById, getSupplierPayments, getSupplierReminders, createSupplier, updateSupplier, deleteSupplier, settleSupplierPayable, sendSupplierReminder } from '../controllers/supplier.controller';
+import { authMiddleware, authorize } from '../middlewares/auth.middleware.ts';
+import { getSuppliers, getSupplierById, getSupplierPayments, getSupplierReminders, createSupplier, updateSupplier, deleteSupplier, settleSupplierPayable, sendSupplierReminder } from '../controllers/supplier.controller.ts';
 
 const router = Router();
 

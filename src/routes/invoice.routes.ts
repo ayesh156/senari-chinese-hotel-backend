@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { authMiddleware, authorize } from '../middlewares/auth.middleware';
+import { authMiddleware, authorize } from '../middlewares/auth.middleware.ts';
 import {
   getInvoices,
   getInvoiceById,
   createInvoice,
-} from '../controllers/invoice.controller';
+} from '../controllers/invoice.controller.ts';
 
 const router = Router();
 

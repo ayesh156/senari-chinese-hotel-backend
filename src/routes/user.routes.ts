@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authMiddleware, authorize } from '../middlewares/auth.middleware';
+import { authMiddleware, authorize } from '../middlewares/auth.middleware.ts';
 import {
   getAllUsers,
   getUserById,
@@ -9,7 +9,7 @@ import {
   selfUpdate,
   toggleStatus,
   deleteUser,
-} from '../controllers/user.controller';
+} from '../controllers/user.controller.ts';
 
 const router = Router();
 

@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import prisma from '../lib/prisma';
+import prisma from '../lib/prisma.ts';
 
 // ── Configuration ──────────────────────────────────────────────────────────────
 const JWT_SECRET: string = process.env.JWT_SECRET || 'senari-hotel-secret-key-change-in-production';

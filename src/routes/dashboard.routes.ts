@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authMiddleware, authorize } from '../middlewares/auth.middleware';
+import { authMiddleware, authorize } from '../middlewares/auth.middleware.ts';
 import {
   getDashboardSummary,
   getTodaySales,
@@ -8,7 +8,7 @@ import {
   getPendingPayables,
   getTodaySalesTrend,
   getPopularCategories,
-} from '../controllers/dashboard.controller';
+} from '../controllers/dashboard.controller.ts';
 
 const router = Router();
 

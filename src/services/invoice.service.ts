@@ -1,6 +1,6 @@
-import prisma from '../lib/prisma';
+import prisma from '../lib/prisma.ts';
 import { Prisma } from '@prisma/client';
-import { broadcastToRoom } from '../gateways/orderLiveSync.gateway.js';
+import { broadcastToRoom } from '../gateways/orderLiveSync.gateway.ts';
 
 interface InvoiceFilter {
   search?: string;

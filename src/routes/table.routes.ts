@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { authMiddleware, authorize } from '../middlewares/auth.middleware';
-import { getTables, getTableById, createTable, updateTableStatus, deleteTable } from '../controllers/table.controller';
+import { authMiddleware, authorize } from '../middlewares/auth.middleware.ts';
+import { getTables, getTableById, createTable, updateTableStatus, deleteTable } from '../controllers/table.controller.ts';
 
 const router = Router();
 

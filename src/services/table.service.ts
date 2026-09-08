@@ -1,5 +1,5 @@
 import { TableStatus } from '@prisma/client';
-import prisma from '../lib/prisma';
+import prisma from '../lib/prisma.ts';
 
 interface CreateTableInput {
   tableNumber: string;

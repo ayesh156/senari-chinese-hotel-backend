@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { CustomerService } from '../services/customer.service';
+import { CustomerService } from '../services/customer.service.ts';
 
 export const getCustomers = async (_req: Request, res: Response, next: NextFunction) => {
   try { res.json({ success: true, data: await CustomerService.getAll() }); } catch (e) { next(e); }

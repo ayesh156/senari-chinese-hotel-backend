@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { InvoiceService } from '../services/invoice.service';
-import { broadcastLiveEvent } from '../gateways/orderLiveSync.gateway';
+import { InvoiceService } from '../services/invoice.service.ts';
+import { broadcastLiveEvent } from '../gateways/orderLiveSync.gateway.ts';
 
 export const getInvoices = async (req: Request, res: Response, next: NextFunction) => {
   try {
