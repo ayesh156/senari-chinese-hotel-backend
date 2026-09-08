@@ -10,7 +10,7 @@ import http from 'http';
 import { fileURLToPath } from 'url';
 import routes from './routes';
 import { errorHandler } from './middlewares/errorHandler.middleware';
-import { orderLiveSyncRouter } from './gateways/orderLiveSync.gateway.js';
+import { orderLiveSyncRouter } from './gateways/orderLiveSync.gateway';
 
 // 🛡️ ==========================================================
 // ZERO-CRASH PROCESS SHIELD: Prevents entire server shutdown
@@ -488,9 +488,14 @@ app.use('/api', routes);
 app.use(errorHandler);
 
 // ===================================
-// 15. HTTP SERVER + SOCKET.IO STARTUP
+// 15. HTTP SERVER STARTUP & OPENLITESPEED EXPORT
 // ===================================
 const server = http.createServer(app);
+
+// 🛡️ OpenLiteSpeed lsnode socket configuration
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
+server.requestTimeout = 0;
 
 server.listen(PORT, () => {
   console.log(`🚀 Senari Restaurant API running on http://localhost:${PORT}`);
@@ -499,3 +504,6 @@ server.listen(PORT, () => {
   console.log(`📡 Status page at http://localhost:${PORT}/api/test`);
   console.log(`❤️  Health check at http://localhost:${PORT}/api/health`);
 });
+
+// 🌟 Ultra Smart pattern: Required for OpenLiteSpeed appserver integration
+export default app;
