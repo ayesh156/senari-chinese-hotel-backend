@@ -1,4 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
+// 🌟 Native Node.js ESM Type-only import
+import type { Request, Response, NextFunction } from 'express';
 import type { AuthRequest } from '../middlewares/auth.middleware.ts';
 import { OrderService } from '../services/order.service.ts';
 import { AuditService, AuditEntities } from '../services/audit.service.ts';

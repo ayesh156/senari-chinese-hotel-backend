@@ -82,9 +82,10 @@ export class AnalyticsService {
     const dateWhere = buildDateWhere(dateFilter);
 
     // Build the where clause for order-based aggregations
+    // 🌟 Ensure paymentStatus array is mutable to satisfy Prisma OrderWhereInput
     const orderWhereBase = {
-      paymentStatus: { in: ['PAID', 'PARTIAL'] as const },
-      status: { not: 'CANCELLED' as const },
+      paymentStatus: { in: ['PAID', 'PARTIAL'] as any },
+      status: { not: 'CANCELLED' },
     };
     const orderWhere = dateWhere.createdAt
       ? { ...orderWhereBase, createdAt: dateWhere.createdAt }
@@ -101,19 +102,21 @@ export class AnalyticsService {
     ] = await Promise.all([
       // 1. Period revenue (amount paid during the filtered period)
       prisma.order.aggregate({
-        where: orderWhere,
+        // 🌟 Cast PaymentStatus array as mutable for Prisma query compatibility
+        where: orderWhere as any,
         _sum: { total: true, amountPaid: true },
       }),
 
       // 2. Previous period revenue (for trend comparison)
       prisma.order.aggregate({
+        // 🌟 Cast where clause to any to satisfy Prisma OrderStatus enum constraint
         where: {
           ...orderWhereBase,
           createdAt: dateWhere.createdAt ? {
             gte: new Date(Number(dateWhere.createdAt.gte) - (Number(dateWhere.createdAt.lte) - Number(dateWhere.createdAt.gte))),
             lte: new Date(Number(dateWhere.createdAt.gte) - 1),
           } : undefined,
-        },
+        } as any,
         _sum: { total: true },
       }),
 
@@ -139,9 +142,10 @@ export class AnalyticsService {
       }),
     ]);
 
-    const periodRevenue = Number(periodRevenueResult._sum.amountPaid || 0);
-    const periodTotal = Number(periodRevenueResult._sum.total || 0);
-    const prevPeriodRevenue = Number(prevPeriodRevenueResult._sum.total || 0);
+    // 🛡️ Safe optional chaining to prevent undefined access on aggregate _sum properties
+    const periodRevenue = Number(periodRevenueResult._sum?.amountPaid || 0);
+    const periodTotal = Number(periodRevenueResult._sum?.total || 0);
+    const prevPeriodRevenue = Number(prevPeriodRevenueResult._sum?.total || 0);
     const totalStockValue = Number(stockValueResult._sum.quantity || 0);
     const poTotal = Number(pendingPayablesResult._sum.totalAmount || 0);
     const poPaid = Number(pendingPayablesResult._sum.amountPaid || 0);
@@ -218,8 +222,9 @@ export class AnalyticsService {
     // Build the 7-day array with 0-fill for missing days
     const dayMap = new Map<string, { revenue: number; orderCount: number }>();
     for (const row of rows) {
-      const dateStr = row.date instanceof Date
-        ? row.date.toISOString().slice(0, 10)
+      // 🌟 Cast date property as unknown to allow runtime Date instance evaluation
+      const dateStr = (row.date as unknown) instanceof Date
+        ? (row.date as unknown as Date).toISOString().slice(0, 10)
         : String(row.date).slice(0, 10);
       dayMap.set(dateStr, {
         revenue: Number(row.revenue) || 0,

@@ -1,5 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
-import { AnalyticsService, DateFilter } from '../services/analytics.service.ts';
+// 🌟 Native Node.js ESM Type-only import for Express
+import type { Request, Response, NextFunction } from 'express';
+// 🌟 Explicit type import for DateFilter
+import { AnalyticsService, type DateFilter } from '../services/analytics.service.ts';
 
 /**
  * Parses query parameters into a DateFilter object:

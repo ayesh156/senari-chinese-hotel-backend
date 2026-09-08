@@ -1,4 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
+// 🌟 Native Node.js ESM Type-only import
+import type { Request, Response, NextFunction } from 'express';
 import { InvoiceService } from '../services/invoice.service.ts';
 import { broadcastLiveEvent } from '../gateways/orderLiveSync.gateway.ts';
 

@@ -1,4 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
+// 🌟 Native Node.js ESM Type-only import
+import type { Request, Response, NextFunction } from 'express';
 import { CategoryService } from '../services/category.service.ts';
 
 export const getCategories = async (req: Request, res: Response, next: NextFunction) => {

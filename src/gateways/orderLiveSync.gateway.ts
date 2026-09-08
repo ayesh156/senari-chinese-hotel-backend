@@ -1,4 +1,5 @@
-import { Router, Request, Response } from 'express';
+// 🌟 Separate runtime Router from type-only Express interfaces
+import { Router, type Request, type Response } from 'express';
 
 interface SseClient {
   id: string;

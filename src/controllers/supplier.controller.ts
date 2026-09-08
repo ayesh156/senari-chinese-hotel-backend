@@ -1,4 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
+// 🌟 Native Node.js ESM Type-only import
+import type { Request, Response, NextFunction } from 'express';
 import { SupplierService } from '../services/supplier.service.ts';
 
 export const getSuppliers = async (_req: Request, res: Response, next: NextFunction) => {

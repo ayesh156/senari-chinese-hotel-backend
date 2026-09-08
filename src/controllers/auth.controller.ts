@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
-import { Request, Response, NextFunction } from 'express';
+// 🌟 Native Node.js ESM Type-only import
+import type { Request, Response, NextFunction } from 'express';
 import prisma from '../lib/prisma.ts';
 import { AuthService } from '../services/auth.service.ts';
 import { AuditService, AuditActions, AuditEntities } from '../services/audit.service.ts';
