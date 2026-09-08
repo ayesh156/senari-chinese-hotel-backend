@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import type { AuthRequest } from '../middlewares/auth.middleware';
 import { OrderService } from '../services/order.service';
 import { AuditService, AuditEntities } from '../services/audit.service';
+import { broadcastLiveEvent } from '../gateways/orderLiveSync.gateway';
 
 function auditCtx(authReq: AuthRequest) {
   return { userId: authReq.user?.userId, userName: authReq.user?.email ?? undefined, userRole: authReq.user?.role ?? undefined };
@@ -82,6 +83,9 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
       // Ignore audit failure for guest/web checkouts
     }
 
+    // 🌟 Broadcast new order to active POS screens
+    broadcastLiveEvent('orders', 'order_created', order);
+
     res.status(201).json({ success: true, data: order });
   } catch (error) {
     next(error);
@@ -123,6 +127,9 @@ export const updateOrderStatus = async (req: Request, res: Response, next: NextF
       { oldStatus: undefined, newStatus: status, orderId: id },
       auditCtx(authReq)
     );
+
+    // 🌟 Broadcast updated status to POS screens
+    broadcastLiveEvent('orders', 'order_status_updated', updated);
 
     res.json({ success: true, data: updated });
   } catch (error) {

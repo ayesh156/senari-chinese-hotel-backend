@@ -10,7 +10,29 @@ import http from 'http';
 import { fileURLToPath } from 'url';
 import routes from './routes';
 import { errorHandler } from './middlewares/errorHandler.middleware';
-import { syncRouter } from './gateways/checkoutSync.gateway.js';
+import { orderLiveSyncRouter } from './gateways/orderLiveSync.gateway.js';
+
+// 🛡️ ==========================================================
+// ZERO-CRASH PROCESS SHIELD: Prevents entire server shutdown
+// on dropped SSE connections, client closes, or broken pipes
+// ==========================================================
+process.on('uncaughtException', (err: any) => {
+  if (
+    err?.code === 'EPIPE' ||
+    err?.code === 'ECONNRESET' ||
+    err?.code === 'ERR_STREAM_WRITE_AFTER_END' ||
+    err?.code === 'ECANCELED' ||
+    err?.message?.includes('write after end')
+  ) {
+    // Gracefully ignore closed client streams — keeps server running 24/7
+    return;
+  }
+  console.error('[Process Shield] Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason: any) => {
+  console.error('[Process Shield] Unhandled Rejection:', reason);
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,7 +58,8 @@ for (const envPath of envPaths) {
 }
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+// 🌟 Accept dynamic PORT assigned by OpenLiteSpeed appserver (lsnode)
+const PORT = Number(process.env.PORT) || 3005;
 const isProduction = process.env.NODE_ENV === 'production';
 
 // ===================================
@@ -451,9 +474,12 @@ app.get('/api/test', (_req, res) => {
 });
 
 // ===================================
-// 13. API ROUTES
+// 13. API ROUTES & SSE GATEWAY MOUNT
 // ===================================
-app.use('/api/sync', syncRouter);
+// 🌟 Mount Live E-commerce & POS persistent sync stream
+app.use('/api/live-sync', orderLiveSyncRouter);
+
+// Standard API routes (foods, orders, invoices, categories, etc.)
 app.use('/api', routes);
 
 // ===================================

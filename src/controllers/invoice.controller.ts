@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { InvoiceService } from '../services/invoice.service';
+import { broadcastLiveEvent } from '../gateways/orderLiveSync.gateway';
 
 export const getInvoices = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -64,6 +65,9 @@ export const createInvoice = async (req: Request, res: Response, next: NextFunct
       customerId: customerId ? parseInt(customerId, 10) : undefined,
       paymentMethod,
     });
+
+    // 🌟 Broadcast finalized invoice to listening POS clients
+    broadcastLiveEvent('invoices', 'invoice_created', invoice);
 
     res.status(201).json({ success: true, data: invoice });
   } catch (error) {
