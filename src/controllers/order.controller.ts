@@ -84,9 +84,22 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
       // Ignore audit failure for guest/web checkouts
     }
 
-    // 🌟 Broadcast new order to active POS screens
-    broadcastLiveEvent('orders', 'order_created', order);
+    // 🛡️ Multi-Channel / Multi-Event Real-Time Push:
+    // Dispatches to both 'orders' and 'invoices' channels using standard event aliases
+    // so Kanban, Kitchen boards, and Invoices tables update simultaneously without page refreshes.
+    try {
+      // 1. Send to Orders channel (supports both order_created and invoice_finalized listeners)
+      broadcastLiveEvent('orders', 'order_created', order);
+      broadcastLiveEvent('orders', 'invoice_finalized', order);
 
+      // 2. Send to Invoices channel
+      broadcastLiveEvent('invoices', 'invoice_created', order);
+      broadcastLiveEvent('invoices', 'invoice_finalized', order);
+    } catch (sseErr) {
+      console.warn('[SSE Broadcast Warning] Non-fatal notification error:', sseErr);
+    }
+
+    // 🌟 Immediate DB confirmation response to customer (Ends connection instantly)
     res.status(201).json({ success: true, data: order });
   } catch (error) {
     next(error);

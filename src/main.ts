@@ -476,7 +476,8 @@ app.get('/api/test', (_req, res) => {
 // ===================================
 // 13. API ROUTES & SSE GATEWAY MOUNT
 // ===================================
-// 🌟 Mount Live E-commerce & POS persistent sync stream
+// 🌟 Mount Live POS persistent sync stream (Supports both /api/sync and /api/live-sync for frontend compatibility)
+app.use('/api/sync', orderLiveSyncRouter);
 app.use('/api/live-sync', orderLiveSyncRouter);
 
 // Standard API routes (foods, orders, invoices, categories, etc.)

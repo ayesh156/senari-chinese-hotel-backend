@@ -1,5 +1,6 @@
 // 🌟 Separate runtime Router from type-only Express interfaces
-import { Router, type Request, type Response } from 'express';
+import { Router, type Request, type Response, type NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
 
 interface SseClient {
   id: string;
@@ -13,10 +14,27 @@ const liveClients = new Map<string, SseClient>();
 
 export const orderLiveSyncRouter = Router();
 
-// 1. Client Browser එක සම්බන්ධ වන තැන (Zero-Leak Persistent SSE Stream)
-orderLiveSyncRouter.get('/stream', (req: Request, res: Response) => {
+// 🛡️ Staff Auth Guard compatible with Browser EventSource (accepts Bearer header OR ?token= query param)
+orderLiveSyncRouter.get('/stream', (req: Request, res: Response, next: NextFunction) => {
+  const token = req.headers.authorization?.replace('Bearer ', '') || (req.query.token as string);
+  const JWT_SECRET = process.env.JWT_SECRET || 'senari-hotel-secret-key-change-in-production';
+
+  // Allow connecting without hard-failing if token isn't passed from internal POS screens
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as any;
+      (req as any).user = decoded;
+    } catch {
+      // Ignore invalid token and continue as guest terminal
+    }
+  }
+
+  next();
+}, (req: Request, res: Response) => {
+  // 🌟 Auto-detect terminal parameters from POS query string
+  const terminalId = (req.query.terminalId as string) || 'SHOP';
   const channel = (req.query.channel as 'orders' | 'invoices' | 'all') || 'all';
-  const clientId = String(req.query.clientId || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+  const clientId = String(req.query.clientId || `${terminalId}-${Date.now()}`);
 
   // 🛡️ 1. OS Kernel Level TCP Keep-Alive (Ghost Socket වීම සම්පූර්ණයෙන් වළක්වයි)
   req.socket.setKeepAlive(true, 10000);

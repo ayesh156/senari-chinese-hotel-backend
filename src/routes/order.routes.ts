@@ -18,7 +18,9 @@ router.get('/', authMiddleware, getOrders);
 router.get('/live', authMiddleware, getLiveOrders);
 // GET /api/orders/:id
 router.get('/:id', authMiddleware, getOrderById);
-// POST /api/orders — Public: Allows web customers & POS to place pre-orders without token
+// 🌟 PUBLIC CUSTOMER INTAKE:
+// Web customers place pre-orders directly into database via standard REST POST.
+// Does NOT open persistent SSE stream, completely immune to zombie socket flooding.
 router.post('/', createOrder);
 // PUT /api/orders/:id — ADMIN/MANAGER can update orders
 router.put('/:id', authMiddleware, authorize('ADMIN', 'MANAGER'), updateOrder);
