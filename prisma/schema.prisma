@@ -95,7 +95,7 @@ model FoodItem {
   price Decimal @db.Decimal(10, 2)
   categoryId Int
   category Category @relation("FoodCategory", fields: [categoryId], references: [id])
-  image String?
+  image String? @db.VarChar(500)
   images Json @default("[]")
   prepTimeMinutes Int @default(15)
   calories Int @default(450)
