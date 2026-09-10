@@ -197,33 +197,39 @@ export class FoodService {
           : [];
       }
 
-      // Handle image catalog and primary selection with automatic local file cleanup if replaced by web link
+      // 🌟 Safe Image Catalog Handling: Filter out falsy values, stringified "null", or duplicates
       if (data.imagesCatalog !== undefined) {
-        updateData.images = Array.isArray(data.imagesCatalog)
-          ? data.imagesCatalog
+        const cleanCatalog = Array.isArray(data.imagesCatalog)
+          ? data.imagesCatalog.filter((img) => img && img !== 'null' && img !== 'undefined')
           : [];
+        if (cleanCatalog.length > 0) {
+          updateData.images = cleanCatalog;
+        }
       }
 
-      const newPrimary = (data.primaryImage !== undefined && data.primaryImage !== "")
+      // 🌟 Clean Primary Image detection
+      const candidatePrimary = (data.primaryImage && data.primaryImage !== 'null' && data.primaryImage !== 'undefined')
         ? data.primaryImage
-        : (data.imageFilename !== undefined ? getImageUrl(data.imageFilename) : undefined);
+        : (data.imageFilename ? getImageUrl(data.imageFilename) : undefined);
 
-      if (newPrimary !== undefined) {
-        // Check if previous image was a physical local file and clean it up from disk
-        const existing = await prisma.foodItem.findUnique({ where: { id } });
-        if (existing?.image && !existing.image.startsWith("http")) {
-          const oldFilename = path.basename(existing.image);
-          const oldFilePath = path.join(UPLOADS_DIR, oldFilename);
-          if (fs.existsSync(oldFilePath)) {
-            try {
+      if (candidatePrimary !== undefined && candidatePrimary !== null) {
+        // Check if previous image was a local file and safely remove it without breaking DB update
+        try {
+          const existing = await prisma.foodItem.findUnique({ where: { id } });
+          if (existing?.image && !existing.image.startsWith('http') && existing.image !== candidatePrimary) {
+            const oldFilename = path.basename(existing.image);
+            const oldFilePath = path.join(UPLOADS_DIR, oldFilename);
+            if (fs.existsSync(oldFilePath)) {
               fs.unlinkSync(oldFilePath);
               console.log(`[FS] Cleaned up replaced local image file: ${oldFilePath}`);
-            } catch (unlinkErr) {
-              console.warn("[FS] Failed to remove replaced image file:", unlinkErr);
             }
           }
+        } catch (fsErr) {
+          // Non-blocking catch: Local disk cleanup failure should NEVER abort food update
+          console.warn('[FS Warning] Safe cleanup ignored error:', fsErr);
         }
-        updateData.image = newPrimary;
+
+        updateData.image = candidatePrimary;
       }
 
       const food = await prisma.foodItem.update({

@@ -123,55 +123,77 @@ export const updateFood = async (req: Request, res: Response, next: NextFunction
       serves, ingredients, primaryImage, existingImages,
     } = req.body;
 
-    // Handle multiple files from req.files
-    const files = (req.files as Express.Multer.File[]) || [];
-    const uploadedPaths = files.map(f => `/uploads/foods/${f.filename}`);
-
-    // Parse existing image paths already in DB
-    let parsedExisting: string[] = [];
-    if (existingImages) {
-      try {
-        parsedExisting = typeof existingImages === 'string' ? JSON.parse(existingImages) : existingImages;
-      } catch {
-        parsedExisting = [existingImages];
-      }
+    // 🌟 1. Fetch current food record first to prevent null/undefined overwrites on fallback
+    const currentFood = await FoodService.getById(id);
+    if (!currentFood) {
+      res.status(404).json({ success: false, message: 'Food item not found' });
+      return;
     }
 
-    const imagesCatalog = [...parsedExisting, ...uploadedPaths];
-    const finalPrimary = primaryImage || imagesCatalog[0] || (files[0] ? `/uploads/foods/${files[0].filename}` : undefined);
+    // 🌟 2. Handle multiple files from req.files safely
+    const uploadedFiles = (req.files as Express.Multer.File[]) || [];
+    const newUploadedPaths = uploadedFiles.map(f => `/uploads/foods/${f.filename}`);
 
-    const oldFood = await FoodService.getById(id);
+    // 🌟 3. Clean & sanitize existing image paths (filters out "null", "undefined", and empty strings)
+    let sanitizedExisting: string[] = [];
+    if (existingImages && existingImages !== 'null' && existingImages !== 'undefined') {
+      try {
+        const decoded = typeof existingImages === 'string' ? JSON.parse(existingImages) : existingImages;
+        sanitizedExisting = Array.isArray(decoded) ? decoded.filter(Boolean) : [decoded].filter(Boolean);
+      } catch {
+        sanitizedExisting = [existingImages].filter(Boolean);
+      }
+    } else if (currentFood.images && Array.isArray(currentFood.images)) {
+      sanitizedExisting = (currentFood.images as string[]).filter(Boolean);
+    }
+
+    const compiledImagesCatalog = [...sanitizedExisting, ...newUploadedPaths];
+
+    // 🌟 4. Clean Primary Image fallback: Never pass "null" / "undefined" string to Prisma
+    const cleanPrimary = (primaryImage && primaryImage !== 'null' && primaryImage !== 'undefined')
+      ? primaryImage
+      : undefined;
+
+    const resolvedPrimary = cleanPrimary 
+      || compiledImagesCatalog[0] 
+      || (uploadedFiles[0] ? `/uploads/foods/${uploadedFiles[0].filename}` : undefined) 
+      || currentFood.image 
+      || undefined;
 
     const toBool = (v: any) => v === 'true' || v === true;
-    const parsedPrice = price !== undefined ? parseFloat(price) : undefined;
+    const parsedPrice = (price !== undefined && price !== 'null' && price !== '') ? parseFloat(price) : undefined;
+    const parsedCategoryId = (categoryId && categoryId !== 'null' && categoryId !== 'undefined') ? parseInt(categoryId, 10) : undefined;
+    const parsedPrepTime = (prepTimeMinutes !== undefined && prepTimeMinutes !== 'null' && prepTimeMinutes !== '') ? parseInt(prepTimeMinutes, 10) : undefined;
+    const parsedCalories = (calories !== undefined && calories !== 'null' && calories !== '') ? parseInt(calories, 10) : undefined;
+
     const parsedIngredients = ingredients
       ? (typeof ingredients === 'string' ? ingredients.split(',').map((s: string) => s.trim()).filter(Boolean) : ingredients)
       : undefined;
 
-    // Update food with new image catalog array and selected primary image
+    // 🌟 5. Update food with fully sanitized types, preventing Prisma 500 runtime crashes
     const food = await FoodService.update(id, {
-      name,
+      name: (name && name !== 'null') ? name : currentFood.name,
       price: parsedPrice,
-      description: description || undefined,
-      categoryId: categoryId ? parseInt(categoryId, 10) : undefined,
+      description: (description && description !== 'null' && description !== 'undefined') ? description : undefined,
+      categoryId: parsedCategoryId,
       isAvailable: isAvailable !== undefined ? toBool(isAvailable) : undefined,
       isNew: isNew !== undefined ? toBool(isNew) : undefined,
       isFeatured: isFeatured !== undefined ? toBool(isFeatured) : undefined,
       isHealthy: isHealthy !== undefined ? toBool(isHealthy) : undefined,
-      prepTimeMinutes: prepTimeMinutes !== undefined ? parseInt(prepTimeMinutes, 10) : undefined,
-      calories: calories !== undefined ? parseInt(calories, 10) : undefined,
-      serves: serves || undefined,
+      prepTimeMinutes: parsedPrepTime,
+      calories: parsedCalories,
+      serves: (serves && serves !== 'null' && serves !== 'undefined') ? serves : undefined,
       ingredients: parsedIngredients,
-      primaryImage: finalPrimary,
-      imagesCatalog,
-      imageUrl,
+      primaryImage: resolvedPrimary,
+      imagesCatalog: compiledImagesCatalog.length > 0 ? compiledImagesCatalog : undefined,
+      imageUrl: (imageUrl && imageUrl !== 'null' && imageUrl !== 'undefined') ? imageUrl : undefined,
     });
 
     const authReq = req as AuthRequest;
     const details: Record<string, unknown> = { foodId: id, name: food.name };
 
-    if (price !== undefined && oldFood && Number(oldFood.price) !== parsedPrice) {
-      details.oldPrice = Number(oldFood.price);
+    if (price !== undefined && currentFood && Number(currentFood.price) !== parsedPrice) {
+      details.oldPrice = Number(currentFood.price);
       details.newPrice = parsedPrice;
       AuditService.log({
         ...auditCtx(authReq),

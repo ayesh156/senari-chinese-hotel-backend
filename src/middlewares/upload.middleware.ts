@@ -22,15 +22,20 @@ const storage = multer.diskStorage({
   },
 });
 
+// 🌟 Universal Image Upload Filter: Accepts ALL image extensions (webp, avif, png, jpeg, jpg, svg, heic, etc.)
+// Prevents Multer from dropping webp and uncommon image formats
 export const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15 MB limit for high-res food photos
   fileFilter: (_req, file, cb) => {
-    const allowed = /\.(jpg|jpeg|png|gif|webp)$/i;
-    if (allowed.test(path.extname(file.originalname))) {
+    const isMimeImage = file.mimetype.startsWith('image/');
+    const allowedExts = /\.(jpg|jpeg|png|gif|webp|avif|bmp|svg|tiff|heic|heif)$/i;
+    const isExtImage = allowedExts.test(path.extname(file.originalname).toLowerCase());
+
+    if (isMimeImage || isExtImage) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files (jpg, jpeg, png, gif, webp) are allowed'));
+      cb(new Error('Selected file is not an image. Please upload a valid image file.'));
     }
   },
 });
