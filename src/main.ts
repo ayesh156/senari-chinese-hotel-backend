@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 import routes from './routes/index.ts';
 import { errorHandler } from './middlewares/errorHandler.middleware.ts';
 import { orderLiveSyncRouter } from './gateways/orderLiveSync.gateway.ts';
+import { connectDB } from './lib/prisma.ts';
 
 // 🛡️ ==========================================================
 // ZERO-CRASH PROCESS SHIELD: Prevents entire server shutdown
@@ -218,6 +219,10 @@ app.use('/api/uploads', express.static(path.join(__dirname, '../public/uploads')
 // ===================================
 // 11. HEALTH CHECK — instant response, never opens DB connection
 // ===================================
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 app.get('/api/health', (_req, res) => {
   res.status(200).json({
     status: 'ok',
@@ -498,13 +503,24 @@ server.keepAliveTimeout = 65000;
 server.headersTimeout = 66000;
 server.requestTimeout = 0;
 
-server.listen(PORT, () => {
-  console.log(`🚀 Senari Restaurant API running on http://localhost:${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`📡 API available at http://localhost:${PORT}/api`);
-  console.log(`📡 Status page at http://localhost:${PORT}/api/test`);
-  console.log(`❤️  Health check at http://localhost:${PORT}/api/health`);
-});
+// Verified startup: Checks database connection before accepting requests
+async function startServer() {
+  try {
+    await connectDB();
+    server.listen(PORT, () => {
+      console.log(`🚀 Senari Restaurant API running on http://localhost:${PORT}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`📡 API available at http://localhost:${PORT}/api`);
+      console.log(`📡 Status page at http://localhost:${PORT}/api/test`);
+      console.log(`❤️  Health check at http://localhost:${PORT}/health`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server due to database connection failure:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 // 🌟 Ultra Smart pattern: Required for OpenLiteSpeed appserver integration
 export default app;
