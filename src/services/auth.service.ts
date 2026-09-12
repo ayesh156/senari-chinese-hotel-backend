@@ -6,8 +6,9 @@ import prisma from '../lib/prisma.ts';
 const JWT_SECRET: string = process.env.JWT_SECRET || 'senari-hotel-secret-key-change-in-production';
 const JWT_REFRESH_SECRET: string = process.env.JWT_REFRESH_SECRET || 'senari-hotel-refresh-secret-change-in-production';
 const BCRYPT_ROUNDS: number = parseInt(process.env.BCRYPT_ROUNDS || '12', 10);
-const ACCESS_TOKEN_EXPIRY: string = process.env.ACCESS_TOKEN_EXPIRY || '15m';
-const REFRESH_TOKEN_EXPIRY: string = process.env.REFRESH_TOKEN_EXPIRY || '7d';
+// POS Cashier Shift එකක් අතරතුර token expire වීම වැළැක්වීමට default එක 12h දක්වා වැඩි කිරීම
+const ACCESS_TOKEN_EXPIRY: string = process.env.ACCESS_TOKEN_EXPIRY || '12h';
+const REFRESH_TOKEN_EXPIRY: string = process.env.REFRESH_TOKEN_EXPIRY || '30d';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface TokenPayload {

@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
@@ -72,6 +73,15 @@ const isProduction = process.env.NODE_ENV === 'production';
 app.set('trust proxy', 1);
 console.log(`🔒 Trust proxy enabled (${isProduction ? 'production' : 'development'})`);
 
+// [FIX] Origin Header Cleaning Middleware (prevents CORS failures from reverse-proxy header comma splitting)
+app.use((req, _res, next) => {
+  const origin = req.headers.origin;
+  if (origin && typeof origin === 'string' && origin.includes(',')) {
+    req.headers.origin = origin.split(',')[0].trim();
+  }
+  next();
+});
+
 // ===================================
 // 2. HEADER DE-DUPLICATION GUARD
 // Prevents duplicate Access-Control-Allow-Origin / Vary headers caused by
@@ -124,51 +134,42 @@ app.use(helmet({
 }));
 
 // ===================================
-// 5. CUSTOM CORS (NO STANDARD CORS MIDDLEWARE)
-// No `cors()` package — we build it manually to prevent duplicate headers
-// with Nginx reverse proxy. Nginx + cors() both emit Access-Control-Allow-Origin,
-// causing CORS errors. This implementation uses setHeaderClean() which calls
-// res.removeHeader() before setHeader(), guaranteeing zero duplicates.
+// 5. BULLETPROOF CORS CONFIGURATION
+// Matches Ultra Smart & LBD architectural standard with dynamic origin validator
 // ===================================
-function isOriginAllowed(origin: string | undefined): boolean {
-  if (!origin) return false;
+const allowedOrigins = [
+  'https://senarihotel.ecosystemlk.app',
+  'https://api.senarihotel.ecosystemlk.app',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  process.env.FRONTEND_URL || ''
+].filter(Boolean);
 
-  // Localhost / Dev origins
-  if (/^https?:\/\/localhost(:\d+)?$/i.test(origin)) return true;
-  if (/^https?:\/\/127\.0\.0\.1(:\d+)?$/i.test(origin)) return true;
+app.use(cors({
+  origin: (origin, callback) => {
+    // Mobile apps, server-to-server or same-origin requests (no origin header)
+    if (!origin) return callback(null, true);
 
-  // Production domains from environment
-  const frontendUrl = process.env.FRONTEND_URL || '';
-  if (frontendUrl && origin.toLowerCase() === frontendUrl.toLowerCase()) return true;
+    const cleanOrigin = origin.replace(/\/+$/, '');
+    const isAllowed = allowedOrigins.some(item => cleanOrigin === item.replace(/\/+$/, '')) ||
+                      /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(cleanOrigin) ||
+                      /\.ecosystemlk\.app$/i.test(cleanOrigin);
 
-  // Custom production domain patterns
-  if (/\.ecosystemlk\.app$/i.test(origin)) return true;
+    if (isAllowed) {
+      return callback(null, cleanOrigin);
+    }
 
-  return false;
-}
-
-function setHeaderClean(res: express.Response, name: string, value: string): void {
-  res.removeHeader(name);
-  res.setHeader(name, value);
-}
-
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-
-  setHeaderClean(res, 'Vary', 'Origin');
-  setHeaderClean(res, 'Access-Control-Allow-Origin', (origin && isOriginAllowed(origin)) ? origin : '');
-  setHeaderClean(res, 'Access-Control-Allow-Credentials', 'true');
-  setHeaderClean(res, 'Access-Control-Expose-Headers', 'Set-Cookie, X-Request-ID');
-
-  if (req.method === 'OPTIONS') {
-    setHeaderClean(res, 'Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    setHeaderClean(res, 'Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Request-ID, Cache-Control, Pragma, Expires');
-    setHeaderClean(res, 'Access-Control-Max-Age', '86400');
-    return res.status(204).end();
-  }
-
-  next();
-});
+    // Safe Fallback: Echoes default domain instead of throwing 500 error
+    return callback(null, 'https://senarihotel.ecosystemlk.app');
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With', 'Accept', 'X-Request-ID'],
+  exposedHeaders: ['Set-Cookie', 'X-Request-ID'],
+  maxAge: 86400 // 24 hours preflight cache
+}));
 
 // ===================================
 // 6. COMPRESSION (GZIP)
