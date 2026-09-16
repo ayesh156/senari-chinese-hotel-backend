@@ -59,6 +59,67 @@ export class OrderService {
   }
 
   static async getLive() {
+    // 🌟 Auto-Complete Stale Previous Days' Orders while strictly PRESERVING future WEB pre-orders
+    try {
+      const now = new Date();
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+
+      // 1. Fetch uncompleted orders created prior to today
+      const staleCandidates = await prisma.order.findMany({
+        where: {
+          status: { notIn: ['COMPLETED', 'CANCELLED'] },
+          createdAt: { lt: startOfToday },
+        },
+        select: { id: true, notes: true },
+      });
+
+      // 2. Filter out orders scheduled for today or future dates/times
+      const idsToAutoComplete: number[] = [];
+      for (const ord of staleCandidates) {
+        let isFutureWebOrder = false;
+        if (ord.notes) {
+          try {
+            const parsed = JSON.parse(ord.notes);
+            if (parsed?.arrivalDate) {
+              const [year, month, day] = parsed.arrivalDate.split('-').map(Number);
+              let scheduledDateTime = new Date(year, month - 1, day, 23, 59, 59);
+
+              if (parsed?.arrivalTime && parsed.arrivalTime.includes(':')) {
+                const [h, m] = parsed.arrivalTime.split(':').map(Number);
+                scheduledDateTime = new Date(year, month - 1, day, h, m, 0);
+              }
+
+              // If scheduled arrival is still in the future, do NOT auto-complete
+              if (scheduledDateTime.getTime() >= now.getTime()) {
+                isFutureWebOrder = true;
+              }
+            }
+          } catch {
+            // Non-JSON notes proceed with normal auto-complete
+          }
+        }
+
+        if (!isFutureWebOrder) {
+          idsToAutoComplete.push(ord.id);
+        }
+      }
+
+      // 3. Batch complete only truly expired orders
+      if (idsToAutoComplete.length > 0) {
+        await prisma.order.updateMany({
+          where: { id: { in: idsToAutoComplete } },
+          data: {
+            status: 'COMPLETED',
+            paymentStatus: 'PAID',
+          },
+        });
+      }
+    } catch (cleanupErr) {
+      console.warn('[OrderService] Daily rollover auto-complete error:', cleanupErr);
+    }
+
+    // Return only today's active kitchen orders
     const orders = await prisma.order.findMany({
       where: { status: { not: 'COMPLETED' } },
       include: {

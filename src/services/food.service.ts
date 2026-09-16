@@ -68,22 +68,79 @@ interface FoodQueryInput {
 }
 
 export class FoodService {
-  // 🌟 Auto-generate next sequential 4/5-character food code (e.g., 0001, 0002)
-  static async getNextCode() {
+  // 🌟 Format-Aware Incremental Code Generator: Preserves prefix and exact digit padding (e.g. 11 -> 12, 011 -> 012)
+  static async getNextAvailableCodeFrom(currentCode?: string | null): Promise<string> {
     const allFoods = await prisma.foodItem.findMany({ select: { code: true } });
-    let maxNum = 0;
-    for (const f of allFoods) {
-      if (f.code) {
-        const num = parseInt(f.code.replace(/\D/g, ''), 10);
-        if (!isNaN(num) && num > maxNum) {
-          maxNum = num;
+    const existingCodes = new Set(allFoods.map(f => f.code ? String(f.code).trim().toUpperCase() : '').filter(Boolean));
+
+    if (currentCode && String(currentCode).trim()) {
+      const trimmed = String(currentCode).trim().toUpperCase();
+      // Match optional non-digit prefix and trailing numeric digits
+      const match = trimmed.match(/^(.*?)(\d+)$/);
+      if (match) {
+        const prefix = match[1] || '';
+        const digitsStr = match[2];
+        const padding = digitsStr.length;
+        let num = parseInt(digitsStr, 10);
+
+        // Increment until an unused code is found
+        for (let i = 0; i < 1000; i++) {
+          num += 1;
+          const candidate = `${prefix}${String(num).padStart(padding, '0')}`.slice(0, 5);
+          if (!existingCodes.has(candidate)) {
+            return candidate;
+          }
         }
       }
     }
-    const nextNum = maxNum + 1;
-    return String(nextNum).padStart(4, '0');
+
+    // Default global fallback
+    return FoodService.getNextCode();
   }
 
+  // 🌟 Dynamic Adaptive Code Generator: Detects highest existing code's exact length and leading zero format
+  static async getNextCode(): Promise<string> {
+    const allFoods = await prisma.foodItem.findMany({
+      select: { code: true },
+      where: { code: { not: null } },
+    });
+
+    let maxNum = 0;
+    let matchingPrefix = '';
+    let matchedDigitsLength = 0;
+    let hasLeadingZeros = false;
+
+    for (const f of allFoods) {
+      if (!f.code) continue;
+      const trimmed = String(f.code).trim().toUpperCase();
+      const match = trimmed.match(/^(.*?)(\d+)$/);
+      if (match) {
+        const prefix = match[1] || '';
+        const digitsStr = match[2];
+        const num = parseInt(digitsStr, 10);
+
+        if (!isNaN(num) && num > maxNum) {
+          maxNum = num;
+          matchingPrefix = prefix;
+          matchedDigitsLength = digitsStr.length;
+          // Check if user specifically padded this code with leading zeroes (e.g. "036", "011")
+          hasLeadingZeros = digitsStr.length > 1 && digitsStr.startsWith('0');
+        }
+      }
+    }
+
+    const nextNum = maxNum + 1;
+
+    // 🌟 If current highest code used leading zero (e.g. 036), preserve exact length (e.g. 037)
+    // 🌟 If current code had no leading zero (e.g. 36 or 11), return clean increment (37 or 12)
+    if (hasLeadingZeros && matchedDigitsLength > 0) {
+      return `${matchingPrefix}${String(nextNum).padStart(matchedDigitsLength, '0')}`.slice(0, 5);
+    }
+
+    return `${matchingPrefix}${nextNum}`.slice(0, 5);
+  }
+
+  // 🌟 Enriched getAll: Injects live sales totals from OrderItem to match the Reports Tab
   static async getAll(query?: FoodQueryInput) {
     const where: Record<string, any> = {};
 
@@ -106,12 +163,51 @@ export class FoodService {
       ];
     }
 
-    const foods = await prisma.foodItem.findMany({
-      where,
-      include: { category: true },
-      orderBy: { sortOrder: "asc" },
+    // 1. Fetch matching food items and aggregate sold quantities across all completed orders
+    const [foods, salesData] = await Promise.all([
+      prisma.foodItem.findMany({
+        where,
+        include: { category: true },
+      }),
+      prisma.orderItem.groupBy({
+        by: ['foodId'],
+        _sum: { quantity: true },
+      }),
+    ]);
+
+    // 2. Build fast in-memory map for sold quantities
+    const salesMap = new Map<number, number>();
+    salesData.forEach((s) => {
+      salesMap.set(s.foodId, s._sum.quantity || 0);
     });
-    return foods;
+
+    // 3. Attach totalSold, salesCount, and orderCount to each food item
+    const enrichedFoods = foods.map((f) => {
+      const sold = salesMap.get(f.id) || 0;
+      return {
+        ...f,
+        totalSold: sold,
+        salesCount: sold,
+        orderCount: sold,
+      };
+    });
+
+    // 4. Default Sort: Pinned (Featured) first -> Highest Sales (Fast Moving) -> Natural Food Code -> ID
+    return enrichedFoods.sort((a, b) => {
+      if (a.isFeatured && !b.isFeatured) return -1;
+      if (!a.isFeatured && b.isFeatured) return 1;
+
+      const soldDiff = (b.totalSold || 0) - (a.totalSold || 0);
+      if (soldDiff !== 0) return soldDiff;
+
+      if (a.code && b.code) {
+        return a.code.localeCompare(b.code, undefined, { numeric: true });
+      }
+      if (a.code) return -1;
+      if (b.code) return 1;
+
+      return b.id - a.id;
+    });
   }
 
   static async getById(id: number) {
@@ -164,6 +260,21 @@ export class FoodService {
       // 🌟 Clean and format food code
       const cleanCode = data.code ? String(data.code).trim().toUpperCase().slice(0, 5) : null;
 
+      // 🌟 Prevent Duplicate Food Code with Meaningful Error Message & Next Available Code matching input format
+      if (cleanCode) {
+        const existingCode = await prisma.foodItem.findFirst({
+          where: { code: cleanCode },
+          select: { id: true, name: true, code: true },
+        });
+        if (existingCode) {
+          const nextSuggestedCode = await FoodService.getNextAvailableCodeFrom(cleanCode);
+          throw Object.assign(
+            new Error(`Food code "${cleanCode}" is already in use by "${existingCode.name}". Next available code is "${nextSuggestedCode}".`),
+            { statusCode: 400 }
+          );
+        }
+      }
+
       const food = await prisma.foodItem.create({
         data: {
           name: data.name,
@@ -187,6 +298,10 @@ export class FoodService {
       return food;
     } catch (error: any) {
       console.error("[FoodService] create error:", error);
+      // 🌟 Re-throw validation errors (like duplicate food codes) without overwriting them to 500
+      if (error.statusCode) {
+        throw error;
+      }
       throw Object.assign(new Error("Failed to create food item"), {
         statusCode: 500,
       });
@@ -197,9 +312,29 @@ export class FoodService {
     try {
       const updateData: Record<string, any> = {};
       if (data.name !== undefined) updateData.name = data.name;
-      // 🌟 Ensure code is updated or cleared if empty string passed
+      // 🌟 Ensure code is updated or cleared; ignores validation if code is unchanged for this item
       if (data.code !== undefined) {
-        updateData.code = data.code ? String(data.code).trim().toUpperCase().slice(0, 5) : null;
+        const cleanCode = data.code ? String(data.code).trim().toUpperCase().slice(0, 5) : null;
+        const currentItem = await prisma.foodItem.findUnique({ where: { id: Number(id) }, select: { code: true } });
+
+        // Only validate duplicates if the code is actually being changed to a different code
+        if (cleanCode && cleanCode !== currentItem?.code) {
+          const duplicate = await prisma.foodItem.findFirst({
+            where: {
+              code: cleanCode,
+              id: { not: Number(id) }, // Strictly exclude current food item
+            },
+            select: { id: true, name: true, code: true },
+          });
+          if (duplicate) {
+            const nextSuggestedCode = await FoodService.getNextAvailableCodeFrom(cleanCode);
+            throw Object.assign(
+              new Error(`Food code "${cleanCode}" is already in use by "${duplicate.name}". Next available code is "${nextSuggestedCode}".`),
+              { statusCode: 400 }
+            );
+          }
+        }
+        updateData.code = cleanCode;
       }
       if (data.price !== undefined) updateData.price = data.price;
       if (data.description !== undefined)
@@ -266,6 +401,10 @@ export class FoodService {
       return food;
     } catch (error: any) {
       console.error(`[FoodService] update(${id}) error:`, error);
+      // 🌟 Re-throw validation errors (like duplicate food codes) without overwriting them to 500
+      if (error.statusCode) {
+        throw error;
+      }
       if (error.code === "P2025") {
         throw Object.assign(new Error("Food item not found"), {
           statusCode: 404,

@@ -67,9 +67,7 @@ export const createInvoice = async (req: Request, res: Response, next: NextFunct
       paymentMethod,
     });
 
-    // 🌟 Broadcast finalized invoice to listening POS clients
-    broadcastLiveEvent('invoices', 'invoice_created', invoice);
-
+    // 🌟 Invoices created via internal POS do not broadcast push notifications
     res.status(201).json({ success: true, data: invoice });
   } catch (error) {
     next(error);

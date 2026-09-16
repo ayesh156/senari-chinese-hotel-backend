@@ -88,19 +88,21 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
       // Ignore audit failure for guest/web checkouts
     }
 
-    // 🛡️ Multi-Channel / Multi-Event Real-Time Push:
-    // Dispatches to both 'orders' and 'invoices' channels using standard event aliases
-    // so Kanban, Kitchen boards, and Invoices tables update simultaneously without page refreshes.
-    try {
-      // 1. Send to Orders channel (supports both order_created and invoice_finalized listeners)
-      broadcastLiveEvent('orders', 'order_created', order);
-      broadcastLiveEvent('orders', 'invoice_finalized', order);
+    // 🌟 ONLY Broadcast notifications if the order originated from the WEB client (Customer Checkout)
+    // Completely silences Quick POS cashier transactions from triggering kitchen bell notifications
+    const orderSource = req.body.source || (req.body.phone || req.body.arrivalDate ? 'WEB' : 'POS');
 
-      // 2. Send to Invoices channel
-      broadcastLiveEvent('invoices', 'invoice_created', order);
-      broadcastLiveEvent('invoices', 'invoice_finalized', order);
-    } catch (sseErr) {
-      console.warn('[SSE Broadcast Warning] Non-fatal notification error:', sseErr);
+    if (orderSource === 'WEB') {
+      try {
+        // Dispatch to Orders channel ONLY for online customer web orders
+        broadcastLiveEvent('orders', 'order_created', order);
+        broadcastLiveEvent('orders', 'invoice_finalized', order);
+        console.log(`[SSE] Web order notification dispatched for order #${order.id}`);
+      } catch (sseErr) {
+        console.warn('[SSE Broadcast Warning] Non-fatal notification error:', sseErr);
+      }
+    } else {
+      console.log(`[SSE Silenced] Order #${order.id} was created via Quick POS - notification skipped.`);
     }
 
     // 🌟 Immediate DB confirmation response to customer (Ends connection instantly)

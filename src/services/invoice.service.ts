@@ -200,14 +200,9 @@ export class InvoiceService {
       return created;
     });
 
-    // 🌟 Broadcast new manual invoice to connected clients via SSE
-    try {
-      broadcastToRoom('default-tenant:SHOP', 'invoice_finalized', invoice);
-    } catch (err) {
-      console.warn('[SSE Broadcast Error]:', err);
-    }
-
-    console.log(`[InvoiceService] Created invoice #${invoice.id} (${invoice.invoiceNumber})`);
+    // 🌟 Silenced POS Manual Invoice Notification:
+    // Direct manual invoices from POS should not send alert pings to the kitchen/notification bell
+    console.log(`[InvoiceService] Created POS invoice #${invoice.id} (${invoice.invoiceNumber}) without broadcast.`);
     return invoice;
   }
 }
