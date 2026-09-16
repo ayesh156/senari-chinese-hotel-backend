@@ -12,6 +12,8 @@ interface CreateOrderInput {
   items: OrderItemInput[];
   subtotal: number;
   discount?: number;
+  serviceChargeRate?: number; // 🌟 Dine-in percentage rate (e.g. 10.00)
+  serviceCharge?: number;     // 🌟 Calculated service charge amount
   total: number;
   amountPaid?: number;
   customerName?: string;
@@ -26,6 +28,8 @@ interface UpdateOrderInput {
   items: OrderItemInput[];
   subtotal?: number;
   discount?: number;
+  serviceChargeRate?: number; // 🌟
+  serviceCharge?: number;     // 🌟
   total?: number;
   amountPaid?: number;
   customerName?: string;
@@ -109,6 +113,8 @@ export class OrderService {
           paymentStatus: finalPaymentStatus,
           subtotal: data.subtotal,
           discount: data.discount || 0,
+          serviceChargeRate: data.serviceChargeRate || 0, // 🌟 Save to serviceChargeRate column
+          serviceCharge: data.serviceCharge || 0,         // 🌟 Save to serviceCharge column
           total: grandTotal,
           amountPaid: parsedAmountPaid,
           customerId: data.customerId || null,
@@ -161,17 +167,24 @@ export class OrderService {
       // Delete old items
       await tx.orderItem.deleteMany({ where: { orderId: id } });
       // Update order + recreate items
+      const updatePayload: Record<string, any> = {
+        type: data.orderType as any,
+        paymentStatus: finalPaymentStatus,
+        subtotal: data.subtotal,
+        discount: data.discount || 0,
+        total: grandTotal,
+        amountPaid: parsedAmountPaid,
+        customerId: data.customerId || null,
+        notes: JSON.stringify({ customerName: data.customerName }),
+      };
+
+      if (data.serviceChargeRate !== undefined) updatePayload.serviceChargeRate = data.serviceChargeRate; // 🌟
+      if (data.serviceCharge !== undefined) updatePayload.serviceCharge = data.serviceCharge;             // 🌟
+
       return tx.order.update({
         where: { id },
         data: {
-          type: data.orderType as any,
-          paymentStatus: finalPaymentStatus,
-          subtotal: data.subtotal,
-          discount: data.discount || 0,
-          total: grandTotal,
-          amountPaid: parsedAmountPaid,
-          customerId: data.customerId || null,
-          notes: JSON.stringify({ customerName: data.customerName }),
+          ...updatePayload,
           items: {
             create: data.items.map((item: any) => ({
               foodId: item.foodId,

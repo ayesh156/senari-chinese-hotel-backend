@@ -95,12 +95,13 @@ model FoodItem {
   price Decimal @db.Decimal(10, 2)
   categoryId Int
   category Category @relation("FoodCategory", fields: [categoryId], references: [id])
+ code String? @db.VarChar(5)
   image String? @db.VarChar(500)
-  images Json @default("[]")
+  images Json?
   prepTimeMinutes Int @default(15)
   calories Int @default(450)
   serves String @default("1-2 persons")
-  ingredients Json @default("[]")
+  ingredients Json?
   isHealthy Boolean @default(false)
   isNew Boolean @default(false)
   isFeatured Boolean @default(false)
@@ -229,10 +230,12 @@ model Order {
   type OrderType @default(DINE_IN)
   status OrderStatus @default(PENDING)
   paymentStatus PaymentStatus @default(UNPAID)
-  subtotal Decimal @db.Decimal(10, 2)
-  discount Decimal @default(0) @db.Decimal(10, 2)
-  total Decimal @db.Decimal(10, 2)
-  amountPaid Decimal @default(0) @db.Decimal(10, 2)
+ subtotal          Decimal       @db.Decimal(10, 2)
+  discount          Decimal       @default(0) @db.Decimal(10, 2)
+  serviceChargeRate Decimal       @default(0) @db.Decimal(5, 2)
+  serviceCharge     Decimal       @default(0) @db.Decimal(10, 2)
+  total             Decimal       @db.Decimal(10, 2)
+  amountPaid        Decimal       @default(0) @db.Decimal(10, 2)
   notes String? @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -20,6 +20,7 @@ function getImageUrl(filename: string | undefined): string | null {
 
 interface CreateFoodInput {
   name?: string;
+  code?: string | null; // 🌟 5-character short food code
   price?: number;
   description?: string;
   categoryId?: number;
@@ -39,6 +40,7 @@ interface CreateFoodInput {
 
 interface UpdateFoodInput {
   name?: string;
+  code?: string | null; // 🌟 5-character short food code
   price?: number;
   description?: string;
   categoryId?: number;
@@ -66,6 +68,22 @@ interface FoodQueryInput {
 }
 
 export class FoodService {
+  // 🌟 Auto-generate next sequential 4/5-character food code (e.g., 0001, 0002)
+  static async getNextCode() {
+    const allFoods = await prisma.foodItem.findMany({ select: { code: true } });
+    let maxNum = 0;
+    for (const f of allFoods) {
+      if (f.code) {
+        const num = parseInt(f.code.replace(/\D/g, ''), 10);
+        if (!isNaN(num) && num > maxNum) {
+          maxNum = num;
+        }
+      }
+    }
+    const nextNum = maxNum + 1;
+    return String(nextNum).padStart(4, '0');
+  }
+
   static async getAll(query?: FoodQueryInput) {
     const where: Record<string, any> = {};
 
@@ -143,9 +161,13 @@ export class FoodService {
         ? data.ingredients
         : [];
 
+      // 🌟 Clean and format food code
+      const cleanCode = data.code ? String(data.code).trim().toUpperCase().slice(0, 5) : null;
+
       const food = await prisma.foodItem.create({
         data: {
           name: data.name,
+          code: cleanCode, // 🌟 Guarantees code is saved in database
           price: data.price,
           description: data.description,
           categoryId: data.categoryId,
@@ -175,6 +197,10 @@ export class FoodService {
     try {
       const updateData: Record<string, any> = {};
       if (data.name !== undefined) updateData.name = data.name;
+      // 🌟 Ensure code is updated or cleared if empty string passed
+      if (data.code !== undefined) {
+        updateData.code = data.code ? String(data.code).trim().toUpperCase().slice(0, 5) : null;
+      }
       if (data.price !== undefined) updateData.price = data.price;
       if (data.description !== undefined)
         updateData.description = data.description;

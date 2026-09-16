@@ -44,6 +44,8 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
       items,
       subtotal,
       discount,
+      serviceChargeRate, // 🌟 Extract percentage rate
+      serviceCharge,     // 🌟 Extract calculated amount
       total,
       amountPaid,
       customerName,
@@ -54,12 +56,14 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
       arrivalTime,
     } = req.body;
 
-    // 🌟 2. OrderService.create වෙත phone, arrivalDate, arrivalTime යැවීම
+    // 🌟 2. OrderService.create වෙත Service Charge සහ අමතර fields යැවීම
     const order = await OrderService.create({
       orderType,
       items,
       subtotal,
       discount,
+      serviceChargeRate: serviceChargeRate !== undefined ? parseFloat(serviceChargeRate) : 0,
+      serviceCharge: serviceCharge !== undefined ? parseFloat(serviceCharge) : 0,
       total,
       amountPaid,
       customerName,
@@ -109,13 +113,15 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
 export const updateOrder = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = parseInt(req.params.id as string, 10);
-    const { orderType, items, subtotal, discount, total, amountPaid, customerName, customerId } = req.body;
+    const { orderType, items, subtotal, discount, serviceChargeRate, serviceCharge, total, amountPaid, customerName, customerId } = req.body;
 
     const updated = await OrderService.update(id, {
       orderType,
       items,
       subtotal,
       discount,
+      serviceChargeRate: serviceChargeRate !== undefined ? parseFloat(serviceChargeRate) : undefined,
+      serviceCharge: serviceCharge !== undefined ? parseFloat(serviceCharge) : undefined,
       total,
       amountPaid,
       customerName,

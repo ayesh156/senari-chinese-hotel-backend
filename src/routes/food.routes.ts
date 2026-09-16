@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware, authorize } from '../middlewares/auth.middleware.ts';
-import { getFoods, getFoodById, getPopularFoods, createFood, updateFood, deleteFood } from '../controllers/food.controller.ts';
+import { getFoods, getFoodById, getPopularFoods, createFood, updateFood, deleteFood, getNextFoodCode } from '../controllers/food.controller.ts';
 import { upload } from '../middlewares/upload.middleware.ts';
 
 const router = Router();
@@ -9,6 +9,8 @@ const router = Router();
 router.get('/', getFoods);
 // GET /api/foods/popular — PUBLIC: top selling items for current month
 router.get('/popular', getPopularFoods);
+// 🌟 GET /api/foods/next-code — Auto-increment next food code preview
+router.get('/next-code', getNextFoodCode);
 // GET /api/foods/:id — public single food item
 router.get('/:id', getFoodById);
 // 🌟 Safe Multer Wrapper: Accepts either 'images' or 'image' field without throwing unhandled 500 errors

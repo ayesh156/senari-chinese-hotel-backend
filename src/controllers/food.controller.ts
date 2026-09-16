@@ -8,6 +8,16 @@ function auditCtx(authReq: AuthRequest) {
   return { userId: authReq.user?.userId, userName: authReq.user?.email ?? undefined, userRole: authReq.user?.role ?? undefined };
 }
 
+// 🌟 Controller to fetch auto-increment next food code
+export const getNextFoodCode = async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const nextCode = await FoodService.getNextCode();
+    res.json({ success: true, data: { nextCode } });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getFoods = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const {
@@ -47,7 +57,7 @@ export const getFoodById = async (req: Request, res: Response, next: NextFunctio
 export const createFood = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const {
-      name, price, description, categoryId,
+      name, code, price, description, categoryId, // 🌟 Added code from req.body
       isAvailable, isNew, isFeatured, isHealthy,
       prepTimeMinutes, calories, imageUrl,
       serves, ingredients, primaryImage, existingImages,
@@ -83,6 +93,7 @@ export const createFood = async (req: Request, res: Response, next: NextFunction
     // Pass image catalog array and selected primary image to FoodService
     const food = await FoodService.create({
       name,
+      code: code ? String(code).trim().toUpperCase().slice(0, 5) : undefined, // 🌟 Forward sanitized code
       price: parsedPrice,
       description: description || undefined,
       categoryId: parsedCategoryId,
@@ -117,7 +128,7 @@ export const updateFood = async (req: Request, res: Response, next: NextFunction
   try {
     const id = parseInt(req.params.id as string, 10);
     const {
-      name, price, description, categoryId,
+      name, code, price, description, categoryId, // 🌟 Added code from req.body
       isAvailable, isNew, isFeatured, isHealthy,
       prepTimeMinutes, calories, imageUrl,
       serves, ingredients, primaryImage, existingImages,
@@ -173,6 +184,7 @@ export const updateFood = async (req: Request, res: Response, next: NextFunction
     // 🌟 5. Update food with fully sanitized types, preventing Prisma 500 runtime crashes
     const food = await FoodService.update(id, {
       name: (name && name !== 'null') ? name : currentFood.name,
+      code: code !== undefined ? (code && code !== 'null' ? String(code).trim().toUpperCase().slice(0, 5) : null) : undefined, // 🌟 Forward sanitized code
       price: parsedPrice,
       description: (description && description !== 'null' && description !== 'undefined') ? description : undefined,
       categoryId: parsedCategoryId,
