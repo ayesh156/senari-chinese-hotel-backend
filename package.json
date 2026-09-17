@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Backend API for Senari Restaurant",
   "type": "module",
- "main": "src/main.ts",
+  "main": "src/main.ts",
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "build": "npx prisma generate",
@@ -20,7 +20,7 @@
   "license": "ISC",
   "dependencies": {
     "@prisma/adapter-mariadb": "^7.8.0",
-    "@prisma/client": "^7.8.0",
+    "@prisma/client": "^5.22.0",
     "bcryptjs": "^3.0.3",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
@@ -43,7 +43,7 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^25.9.1",
     "@types/socket.io": "^3.0.1",
-    "prisma": "^7.8.0",
+    "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "tsup": "^8.4.0",
