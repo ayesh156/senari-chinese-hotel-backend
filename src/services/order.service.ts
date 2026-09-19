@@ -58,31 +58,31 @@ export class OrderService {
     return orders;
   }
 
+  // 🌟 Safe Live Orders Resolver: Strictly protects all active orders and normalizes statuses
   static async getLive() {
-    // 🌟 Auto-Complete Stale Previous Days' Orders while strictly PRESERVING future WEB pre-orders
     try {
       const now = new Date();
-      const startOfToday = new Date();
-      startOfToday.setHours(0, 0, 0, 0);
+      // Use exact start of today in local time
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
 
-      // 1. Fetch uncompleted orders created prior to today
+      // Only check orders strictly created BEFORE today's midnight
       const staleCandidates = await prisma.order.findMany({
         where: {
-          status: { notIn: ['COMPLETED', 'CANCELLED'] },
+          status: { in: ['PENDING', 'PREPARING', 'READY'] },
           createdAt: { lt: startOfToday },
         },
-        select: { id: true, notes: true },
+        select: { id: true, notes: true, createdAt: true },
       });
 
-      // 2. Filter out orders scheduled for today or future dates/times
       const idsToAutoComplete: number[] = [];
       for (const ord of staleCandidates) {
         let isFutureWebOrder = false;
         if (ord.notes) {
           try {
-            const parsed = JSON.parse(ord.notes);
+            const parsed = typeof ord.notes === 'string' ? JSON.parse(ord.notes) : ord.notes;
             if (parsed?.arrivalDate) {
               const [year, month, day] = parsed.arrivalDate.split('-').map(Number);
+              // 🌟 Target arrival day's midnight boundary (protects pre-orders until arrival day concludes)
               let scheduledDateTime = new Date(year, month - 1, day, 23, 59, 59);
 
               if (parsed?.arrivalTime && parsed.arrivalTime.includes(':')) {
@@ -90,45 +90,62 @@ export class OrderService {
                 scheduledDateTime = new Date(year, month - 1, day, h, m, 0);
               }
 
-              // If scheduled arrival is still in the future, do NOT auto-complete
-              if (scheduledDateTime.getTime() >= now.getTime()) {
+              // Keep order active if scheduled for today or any future date
+              if (scheduledDateTime.getTime() >= startOfToday.getTime()) {
                 isFutureWebOrder = true;
               }
             }
           } catch {
-            // Non-JSON notes proceed with normal auto-complete
+            // ignore non-json notes
           }
         }
 
+        // 🌟 Strictly auto-complete only past-day regular POS transactions or expired orders
         if (!isFutureWebOrder) {
           idsToAutoComplete.push(ord.id);
         }
       }
 
-      // 3. Batch complete only truly expired orders
       if (idsToAutoComplete.length > 0) {
         await prisma.order.updateMany({
           where: { id: { in: idsToAutoComplete } },
-          data: {
-            status: 'COMPLETED',
-            paymentStatus: 'PAID',
-          },
+          data: { status: 'COMPLETED' },
         });
       }
     } catch (cleanupErr) {
       console.warn('[OrderService] Daily rollover auto-complete error:', cleanupErr);
     }
 
-    // Return only today's active kitchen orders
+    // 🌟 Always query fresh non-completed active kitchen orders
     const orders = await prisma.order.findMany({
-      where: { status: { not: 'COMPLETED' } },
+      where: {
+        status: { in: ['PENDING', 'PREPARING', 'READY'] },
+      },
       include: {
         items: { include: { food: true } },
         customer: { select: { id: true, name: true, phone: true } },
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
     });
-    return orders;
+
+    // 🌟 Format notes and customer details so frontend gets clean structure directly
+    return orders.map((o) => {
+      let customerName = o.customer?.name || 'Walk-in Customer';
+      let phone = o.customer?.phone || '';
+      if (o.notes) {
+        try {
+          const p = typeof o.notes === 'string' ? JSON.parse(o.notes) : o.notes;
+          if (p.customerName) customerName = p.customerName;
+          if (p.phone) phone = p.phone;
+        } catch {}
+      }
+      return {
+        ...o,
+        customerName,
+        phone,
+        orderType: o.type, // Map Prisma `type` to frontend `orderType`
+      };
+    });
   }
 
   static async getById(id: number) {
@@ -270,10 +287,34 @@ export class OrderService {
     return updated;
   }
 
+  // 🌟 Status update with future pre-order lock guard
   static async updateStatus(id: number, status: string) {
     const valid = ['PENDING', 'PREPARING', 'READY', 'COMPLETED'];
     if (!valid.includes(status)) {
       throw Object.assign(new Error('Invalid status'), { statusCode: 400 });
+    }
+
+    // 🛡️ Lock Check: Check if this order is scheduled for a future date
+    const existingOrder = await prisma.order.findUnique({
+      where: { id },
+      select: { notes: true }
+    });
+
+    if (existingOrder?.notes) {
+      try {
+        const parsed = typeof existingOrder.notes === 'string' ? JSON.parse(existingOrder.notes) : existingOrder.notes;
+        if (parsed?.arrivalDate) {
+          const now = new Date();
+          const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+          
+          // දිනය අදට වඩා ඉදිරියෙන් ඇත්නම් status වෙනස් කිරීමට ඉඩ නොදෙයි
+          if (parsed.arrivalDate > todayStr) {
+            throw Object.assign(new Error(`Order is scheduled for ${parsed.arrivalDate}. Status cannot be updated until the arrival date.`), { statusCode: 400 });
+          }
+        }
+      } catch (err: any) {
+        if (err.statusCode === 400) throw err;
+      }
     }
 
     const updated = await prisma.order.update({

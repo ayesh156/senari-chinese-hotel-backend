@@ -88,25 +88,27 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
       // Ignore audit failure for guest/web checkouts
     }
 
-    // 🌟 ONLY Broadcast notifications if the order originated from the WEB client (Customer Checkout)
-    // Completely silences Quick POS cashier transactions from triggering kitchen bell notifications
+   // 🌟 Unified Live Broadcast: Dispatches order_created for BOTH POS & Web to feed kitchen queue
     const orderSource = req.body.source || (req.body.phone || req.body.arrivalDate ? 'WEB' : 'POS');
+    const enrichedOrder = { ...order, source: orderSource };
 
-    if (orderSource === 'WEB') {
-      try {
-        // Dispatch to Orders channel ONLY for online customer web orders
-        broadcastLiveEvent('orders', 'order_created', order);
-        broadcastLiveEvent('orders', 'invoice_finalized', order);
+    try {
+      // 🌟 කුස්සියේ Live Orders Queue එකට POS සහ Web orders දෙකම යවයි
+      broadcastLiveEvent('orders', 'order_created', enrichedOrder);
+      broadcastLiveEvent('orders', 'invoice_finalized', enrichedOrder);
+
+      if (orderSource === 'WEB') {
         console.log(`[SSE] Web order notification dispatched for order #${order.id}`);
-      } catch (sseErr) {
-        console.warn('[SSE Broadcast Warning] Non-fatal notification error:', sseErr);
+      } else {
+        // POS orders කුස්සියට යන අතර, Notification Bell එක මඟින් source === 'POS' නිසා count එකට එකතු නොකරයි
+        console.log(`[SSE] Quick POS order #${order.id} pushed to live kitchen queue.`);
       }
-    } else {
-      console.log(`[SSE Silenced] Order #${order.id} was created via Quick POS - notification skipped.`);
+    } catch (sseErr) {
+      console.warn('[SSE Broadcast Warning] Non-fatal notification error:', sseErr);
     }
 
     // 🌟 Immediate DB confirmation response to customer (Ends connection instantly)
-    res.status(201).json({ success: true, data: order });
+    res.status(201).json({ success: true, data: enrichedOrder });
   } catch (error) {
     next(error);
   }

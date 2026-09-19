@@ -110,16 +110,16 @@ orderLiveSyncRouter.get('/stream', (req: Request, res: Response, next: NextFunct
  * 🌟 2. Bulletproof SSE Broadcast Utility Function
  * Order හෝ Invoice එකක් සිදු වූ විට controllers වලින් මෙය කෙලින්ම call කරයි
  */
+// 🌟 Standardized SSE Payload: Sends pure raw payload directly in event data so clients parse effortlessly
 export function broadcastLiveEvent(channel: 'orders' | 'invoices', event: string, payload: any) {
-  const data = JSON.stringify({ event, payload });
+  const data = JSON.stringify(payload);
   liveClients.forEach((client, clientId) => {
-    // තමන් subscribe කර ඇති channel එකට අදාළ නම් පමණක් data යැවීම
     if (client.channel === channel || client.channel === 'all') {
       if (client.res.writable && !client.res.writableEnded && !client.req.socket.destroyed) {
         try {
+          // Pure event format compatible with native browser EventSource listeners
           client.res.write(`event: ${event}\ndata: ${data}\n\n`);
         } catch {
-          // ලිවීමේදී socket error ආවොත් ක්ෂණිකව memory එකෙන් ඉවත් කිරීම
           liveClients.delete(clientId);
           try {
             client.res.end();
