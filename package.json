@@ -5,22 +5,24 @@
   "type": "module",
   "main": "src/main.ts",
   "scripts": {
-    "dev": "tsx watch src/main.ts",
-    "build": "npx prisma generate",
+    "dev": "node src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "tsup src/main.ts --format esm --platform node --target node24 --out-dir dist --sourcemap",
     "start": "node src/main.ts",
+    "start:prod": "node src/main.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "seed": "npx prisma db seed",
     "postinstall": "npx prisma generate"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "ts-node --project prisma/tsconfig.seed.json --esm prisma/seed.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@prisma/adapter-mariadb": "^7.8.0",
-    "@prisma/client": "^5.22.0",
+    "@prisma/client": "^6.19.3",
     "bcryptjs": "^3.0.3",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
@@ -43,10 +45,10 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^25.9.1",
     "@types/socket.io": "^3.0.1",
-    "prisma": "^5.22.0",
+    "prisma": "^6.19.3",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
-    "tsup": "^8.4.0",
+    "tsup": "^8.5.1",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   }

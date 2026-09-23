@@ -8,11 +8,8 @@
  */
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
-import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 
-const connectionString = process.env.DATABASE_URL!;
-const adapter = new PrismaMariaDb(connectionString);
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient();
 
 async function syncCategories() {
   console.log('🔄 Starting category sync...\n');
