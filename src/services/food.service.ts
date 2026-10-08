@@ -65,12 +65,14 @@ interface FoodQueryInput {
   categoryId?: number;
   categorySlug?: string;
   search?: string;
+  includeDeleted?: boolean;
+  isDeleted?: boolean;
 }
 
 export class FoodService {
   // 🌟 Format-Aware Incremental Code Generator: Preserves prefix and exact digit padding (e.g. 11 -> 12, 011 -> 012)
   static async getNextAvailableCodeFrom(currentCode?: string | null): Promise<string> {
-    const allFoods = await prisma.foodItem.findMany({ select: { code: true } });
+    const allFoods = await prisma.foodItem.findMany({ where: { isDeleted: false }, select: { code: true } });
     const existingCodes = new Set(allFoods.map(f => f.code ? String(f.code).trim().toUpperCase() : '').filter(Boolean));
 
     if (currentCode && String(currentCode).trim()) {
@@ -102,7 +104,7 @@ export class FoodService {
   static async getNextCode(): Promise<string> {
     const allFoods = await prisma.foodItem.findMany({
       select: { code: true },
-      where: { code: { not: null } },
+      where: { code: { not: null }, isDeleted: false },
     });
 
     let maxNum = 0;
@@ -140,9 +142,16 @@ export class FoodService {
     return `${matchingPrefix}${nextNum}`.slice(0, 5);
   }
 
-  // 🌟 Enriched getAll: Injects live sales totals from OrderItem to match the Reports Tab
+  // 🌟 Enriched getAll: Excludes soft-deleted items by default and injects live sales totals from OrderItem
   static async getAll(query?: FoodQueryInput) {
     const where: Record<string, any> = {};
+
+    // Filter out soft-deleted food items by default, or match explicit isDeleted flag
+    if (query?.isDeleted !== undefined) {
+      where.isDeleted = query.isDeleted;
+    } else if (!query?.includeDeleted) {
+      where.isDeleted = false;
+    }
 
     if (query?.maxPrice) {
       where.price = { lte: query.maxPrice };
@@ -210,10 +219,14 @@ export class FoodService {
     });
   }
 
-  static async getById(id: number) {
+  static async getById(id: number, includeDeleted = false) {
     try {
-      const food = await prisma.foodItem.findUnique({
-        where: { id },
+      const where: Record<string, any> = { id };
+      if (!includeDeleted) {
+        where.isDeleted = false;
+      }
+      const food = await prisma.foodItem.findFirst({
+        where,
         include: { category: true },
       });
       if (!food) {
@@ -416,20 +429,107 @@ export class FoodService {
     }
   }
 
+  /**
+   * Soft-delete food item to preserve historical order integrity and relational audit trail.
+   * Replaces prisma.foodItem.delete with a soft-delete update (isDeleted: true).
+   * Prevents Prisma P2003 foreign key constraint violation when items are referenced in past orders.
+   */
   static async delete(id: number) {
-    // Optionally delete the image file from disk
-    const existing = await prisma.foodItem.findUnique({ where: { id } });
-    if (existing?.image && !existing.image.startsWith("http")) {
-      const filename = path.basename(existing.image);
-      const filePath = path.join(UPLOADS_DIR, filename);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-        console.log(`[FS] Deleted image: ${filePath}`);
-      }
-    }
+    try {
+      const existing = await prisma.foodItem.findFirst({
+        where: { id, isDeleted: false },
+      });
 
-    await prisma.foodItem.delete({ where: { id } });
-    return null;
+      if (!existing) {
+        throw Object.assign(new Error("Food item not found"), {
+          statusCode: 404,
+        });
+      }
+
+      // Perform soft delete: update isDeleted flag to true and disable availability
+      const updatedFood = await prisma.foodItem.update({
+        where: { id },
+        data: {
+          isDeleted: true,
+          isAvailable: false,
+        },
+      });
+
+      return updatedFood;
+    } catch (error: any) {
+      if (error.statusCode === 404) throw error;
+      // Handle Prisma P2003 foreign key constraint error gracefully if hard delete is attempted elsewhere
+      if (error?.code === "P2003" || error?.message?.includes("Foreign key constraint")) {
+        throw Object.assign(
+          new Error("Item is linked to past orders and will be archived/hidden instead of permanently deleted."),
+          { statusCode: 409 }
+        );
+      }
+      console.error(`[FoodService] delete(${id}) error:`, error);
+      throw Object.assign(new Error("Failed to delete food item"), {
+        statusCode: 500,
+      });
+    }
+  }
+
+  /**
+   * Restore a soft-deleted food item back to active status (isDeleted: false, isAvailable: true).
+   */
+  static async restore(id: number) {
+    try {
+      const existing = await prisma.foodItem.findUnique({
+        where: { id },
+        include: { category: true },
+      });
+
+      if (!existing) {
+        throw Object.assign(new Error("Food item not found"), {
+          statusCode: 404,
+        });
+      }
+
+      if (!existing.isDeleted) {
+        return existing; // Already active item
+      }
+
+      // Check for code collision with active foods if item has a code
+      if (existing.code) {
+        const cleanCode = String(existing.code).trim().toUpperCase();
+        const duplicate = await prisma.foodItem.findFirst({
+          where: {
+            code: cleanCode,
+            isDeleted: false,
+            id: { not: id },
+          },
+          select: { id: true, name: true, code: true },
+        });
+
+        if (duplicate) {
+          const nextSuggestedCode = await FoodService.getNextAvailableCodeFrom(cleanCode);
+          throw Object.assign(
+            new Error(`Food code "${cleanCode}" is currently used by active item "${duplicate.name}". Next available code is "${nextSuggestedCode}".`),
+            { statusCode: 400 }
+          );
+        }
+      }
+
+      const restoredFood = await prisma.foodItem.update({
+        where: { id },
+        data: {
+          isDeleted: false,
+          isAvailable: true,
+        },
+        include: { category: true },
+      });
+
+      return restoredFood;
+    } catch (error: any) {
+      if (error.statusCode) throw error;
+      console.error(`[FoodService] restore(${id}) error:`, error);
+      throw Object.assign(new Error("Failed to restore food item"), {
+        statusCode: 500,
+      });
+    }
   }
 
   static async getPopularFoods(limit = 8) {
@@ -463,7 +563,7 @@ export class FoodService {
       if (salesAgg.length >= 4) {
         const ids = salesAgg.map((s) => s.foodId);
         const foods = await prisma.foodItem.findMany({
-          where: { id: { in: ids } },
+          where: { id: { in: ids }, isDeleted: false },
           include: { category: true },
         });
         // Maintain the aggregated order
@@ -476,6 +576,7 @@ export class FoodService {
         where: {
           OR: [{ isFeatured: true }, { isNew: true }],
           isAvailable: true,
+          isDeleted: false,
         },
         include: { category: true },
         take: limit,
@@ -485,9 +586,9 @@ export class FoodService {
       return fallback;
     } catch (error: any) {
       console.error("[FoodService] getPopularFoods error:", error);
-      // Last resort fallback — return any available items
+      // Last resort fallback — return any available non-deleted items
       const fallback = await prisma.foodItem.findMany({
-        where: { isAvailable: true },
+        where: { isAvailable: true, isDeleted: false },
         include: { category: true },
         take: limit,
         orderBy: { sortOrder: "asc" },

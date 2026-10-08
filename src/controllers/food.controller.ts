@@ -27,6 +27,8 @@ export const getFoods = async (req: Request, res: Response, next: NextFunction) 
       categoryId,
       categorySlug,
       search,
+      includeDeleted,
+      isDeleted,
     } = req.query;
 
     const foods = await FoodService.getAll({
@@ -36,6 +38,8 @@ export const getFoods = async (req: Request, res: Response, next: NextFunction) 
       categoryId: categoryId ? parseInt(categoryId as string, 10) : undefined,
       categorySlug: categorySlug as string | undefined,
       search: search as string | undefined,
+      includeDeleted: includeDeleted === 'true',
+      isDeleted: isDeleted !== undefined ? isDeleted === 'true' : undefined,
     });
 
     res.json({ success: true, data: foods });
@@ -243,18 +247,38 @@ export const deleteFood = async (req: Request, res: Response, next: NextFunction
   try {
     const id = parseInt(req.params.id as string, 10);
     const authReq = req as AuthRequest;
-    const oldFood = await FoodService.getById(id).catch(() => null);
+    const oldFood = await FoodService.getById(id, true).catch(() => null);
 
     await FoodService.delete(id);
 
     AuditService.deleted(
       AuditEntities.FOOD_ITEM,
       id,
-      { name: oldFood?.name, foodId: id },
+      { name: oldFood?.name, foodId: id, archived: true },
       auditCtx(authReq)
     );
 
-    res.json({ success: true, data: null });
+    res.json({ success: true, data: null, message: "Food item archived successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const restoreFood = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = parseInt(req.params.id as string, 10);
+    const authReq = req as AuthRequest;
+
+    const restoredFood = await FoodService.restore(id);
+
+    AuditService.updated(
+      AuditEntities.FOOD_ITEM,
+      id,
+      { name: restoredFood.name, foodId: id, restored: true },
+      auditCtx(authReq)
+    );
+
+    res.json({ success: true, data: restoredFood, message: "Food item restored successfully" });
   } catch (error) {
     next(error);
   }

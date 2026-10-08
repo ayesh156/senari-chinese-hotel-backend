@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware, authorize } from '../middlewares/auth.middleware.ts';
-import { getFoods, getFoodById, getPopularFoods, createFood, updateFood, deleteFood, getNextFoodCode } from '../controllers/food.controller.ts';
+import { getFoods, getFoodById, getPopularFoods, createFood, updateFood, deleteFood, getNextFoodCode, restoreFood } from '../controllers/food.controller.ts';
 import { upload } from '../middlewares/upload.middleware.ts';
 
 const router = Router();
@@ -38,6 +38,9 @@ const handleUpload = (req: any, res: any, next: any) => {
 router.post('/', authMiddleware, authorize('ADMIN', 'MANAGER'), handleUpload, createFood);
 // PUT /api/foods/:id — ADMIN/MANAGER can update with multiple images support
 router.put('/:id', authMiddleware, authorize('ADMIN', 'MANAGER'), handleUpload, updateFood);
+// 🌟 PATCH/POST /api/foods/:id/restore — ADMIN/MANAGER can restore soft-deleted items
+router.patch('/:id/restore', authMiddleware, authorize('ADMIN', 'MANAGER'), restoreFood);
+router.post('/:id/restore', authMiddleware, authorize('ADMIN', 'MANAGER'), restoreFood);
 // DELETE /api/foods/:id — ADMIN only
 router.delete('/:id', authMiddleware, authorize('ADMIN'), deleteFood);
 

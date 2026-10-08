@@ -74,7 +74,7 @@ export class CategoryService {
   }
 
   static async delete(id: number) {
-    const foodCount = await prisma.foodItem.count({ where: { categoryId: id } });
+    const foodCount = await prisma.foodItem.count({ where: { categoryId: id, isDeleted: false } });
     const inventoryCount = await prisma.inventoryItem.count({ where: { categoryId: id } });
     if (foodCount > 0 || inventoryCount > 0) {
       throw Object.assign(
