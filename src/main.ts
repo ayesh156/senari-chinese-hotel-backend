@@ -216,6 +216,8 @@ app.use(
   express.static(path.join(__dirname, '../public/uploads'))
 );
 app.use('/api/uploads', express.static(path.join(__dirname, '../public/uploads')));
+// 🌟 FIX: Database එකෙන් එන /uploads/foods/... ඉල්ලීම් කෙලින්ම /uploads වෙත යොමු කිරීම
+app.use('/uploads/foods', express.static(path.join(__dirname, '../public/uploads')));
 
 // ===================================
 // 11. HEALTH CHECK — instant response, never opens DB connection
