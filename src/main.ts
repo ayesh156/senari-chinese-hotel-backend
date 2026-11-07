@@ -138,8 +138,8 @@ app.use(helmet({
 // Matches Ultra Smart & LBD architectural standard with dynamic origin validator
 // ===================================
 const allowedOrigins = [
-  'https://senarihotel.ecosystemlk.app',
-  'https://api.senarihotel.ecosystemlk.app',
+  'https://senari.nebulainfinite.com',
+  'https://api-senari.nebulainfinite.com',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:3000',
@@ -155,14 +155,14 @@ app.use(cors({
     const cleanOrigin = origin.replace(/\/+$/, '');
     const isAllowed = allowedOrigins.some(item => cleanOrigin === item.replace(/\/+$/, '')) ||
                       /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(cleanOrigin) ||
-                      /\.ecosystemlk\.app$/i.test(cleanOrigin);
+                      /\.nebulainfinite\.com$/i.test(cleanOrigin);
 
     if (isAllowed) {
       return callback(null, cleanOrigin);
     }
 
     // Safe Fallback: Echoes default domain instead of throwing 500 error
-    return callback(null, 'https://senarihotel.ecosystemlk.app');
+    return callback(null, 'https://senari.nebulainfinite.com');
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
