@@ -202,22 +202,55 @@ app.use((_req, res, next) => {
   next();
 });
 
-// ===================================
-// 10. STATIC FILE SERVING (UPLOADS)
-// ===================================
-// Enable Cross-Origin Resource Sharing for static upload directory
-app.use(
-  '/uploads',
-  (req, res, next) => {
-    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    next();
-  },
-  express.static(path.join(__dirname, '../public/uploads'))
-);
-app.use('/api/uploads', express.static(path.join(__dirname, '../public/uploads')));
-// 🌟 FIX: Database එකෙන් එන /uploads/foods/... ඉල්ලීම් කෙලින්ම /uploads වෙත යොමු කිරීම
-app.use('/uploads/foods', express.static(path.join(__dirname, '../public/uploads')));
+
+ // ===================================
+ // 10. STATIC FILE SERVING (UPLOADS)
+ // ===================================
+
+ // Actual physical uploads folder:
+ // /home/api-senari.nebulainfinite.com/public/uploads
+
+ const uploadsPath = path.resolve(
+   '/home/api-senari.nebulainfinite.com/public/uploads'
+ );
+
+ console.log('====================================');
+ console.log('UPLOADS CONFIGURATION');
+ console.log('Physical path:', uploadsPath);
+ console.log('Folder exists:', fs.existsSync(uploadsPath));
+ console.log('====================================');
+
+ // Serve uploaded images
+ app.use(
+   '/uploads',
+   (req, res, next) => {
+     res.setHeader(
+       'Cross-Origin-Resource-Policy',
+       'cross-origin'
+     );
+
+     res.setHeader(
+       'Access-Control-Allow-Origin',
+       '*'
+     );
+
+     next();
+   },
+   express.static(uploadsPath, {
+     index: false
+   })
+ );
+
+ // Support API uploads URL
+ app.use(
+   '/api/uploads',
+   express.static(uploadsPath, {
+     index: false
+   })
+ );
+
+
+
 
 // ===================================
 // 11. HEALTH CHECK — instant response, never opens DB connection
